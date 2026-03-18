@@ -1,31 +1,36 @@
 /**
  * main.js — Анастасия Швейкина Portfolio
  *
- * IMAGE MAP: 1.jpg, 2.jpg, 3.jpg, 4.jpg, 5.jpg, p1.jpg
+ * КАРТА ИЗОБРАЖЕНИЙ: 1.jpg, 2.jpg, 3.jpg, 4.jpg, 5.jpg, p1.jpg
  *
- * The page has 5 real sections + a virtual "intro" phase.
- * Image sequence driven by split-line reveal:
+ * СТРУКТУРА СТРАНИЦЫ:
+ *   5 реальных секций (.page-section) + отдельная интро-фаза.
  *
- *   INTRO  → image 1  (static overlay, fades out as sec-1 scrolls in)
- *   Sec 1  → image 2  (title: Я практикующий психолог)
- *   Sec 2  → image 3  (С какими запросами)
- *   Sec 3  → image 4  (Как проходит работа)
- *   Sec 4  → image 5  (Форматы и стоимость)
- *   Sec 5  → image p1 (Остались вопросы)
+ * МОДЕЛЬ ДАННЫХ:
+ *   sectionsMeta[]   — описывает каждую из 5 секций (DOM + картинки)
+ *   transitionsMeta[]— описывает переходы между сценами:
+ *       [0] intro-transition: интро → секция-1 (триггер = scrollY)
+ *       [1..4] sec-transitions: секция N → секция N+1 (триггер = lastTB)
  *
- * SPLIT LINE rule (same for all transitions including intro→sec1):
- *   - Trigger = the "lastTB" element for that transition
- *     · For INTRO: sec-1's [data-first-textbox] (the firstTB reaches viewport top)
- *     · For every real section: its own [data-last-textbox]
- *   - Reveal distance = REVEAL_SCROLL_PX (80vh)
+ * МЕХАНИКА REVEAL (одинакова для всех переходов):
+ *   - Прогресс 0 → front-canvas полностью видим (текущая картинка)
+ *   - Прогресс 0→1 → split-line снизу вверх: front clipPath уменьшается
+ *   - Прогресс 1 → back-canvas стал «новым фронтом», JS меняет src
  *
- * TITLE BEHAVIOR:
- *   - Starts big at bottom of sticky canvas
- *   - Parks small at top when firstTB top <= 0
+ *   Для intro-transition:
+ *     progress = clamp(scrollY / REVEAL_SCROLL_PX, 0, 1)
  *
- * INTRO BEHAVIOR:
- *   - Text stays static, no fly-out
- *   - Overlay fades out as sec-1 scrolls in (firstTB approaches viewport)
+ *   Для sec-transitions:
+ *     progress = clamp(-lastTB.getBoundingClientRect().top / REVEAL_SCROLL_PX, 0, 1)
+ *     (начинается ровно когда верхний край lastTB достигает верха viewport)
+ *
+ * TITLE PARKING:
+ *   CSS управляет анимацией; JS переключает .title-parked на sticky-canvas.
+ *   Парковка: firstTB.top <= 0. Отпарковка при скролле вверх.
+ *
+ * INTRO OVERLAY:
+ *   Фейдит на основе scrollY, не зависит от textbox.
+ *   Не пересматривается при скролле вниз после dismiss.
  */
 
 'use strict';
@@ -49,20 +54,20 @@ const IMG = {
 
 /* ─── DOM REFS ──────────────────────────────────────────────── */
 const introOverlay = document.getElementById('intro-overlay');
-const introHint = introOverlay ? introOverlay.querySelector('.intro-scroll-hint') : null;
-const topTrigger = document.getElementById('top-trigger');
-const sections = Array.from(document.querySelectorAll('.page-section'));
+const introHint    = introOverlay ? introOverlay.querySelector('.intro-scroll-hint') : null;
+const topTrigger   = document.getElementById('top-trigger');
+const sections     = Array.from(document.querySelectorAll('.page-section'));
 
 const canvasFront = document.getElementById('canvas-front');
-const canvasBack = document.getElementById('canvas-back');
-const frontBlur = document.getElementById('front-blur');
-const frontMain = document.getElementById('front-main');
-const backBlur = document.getElementById('back-blur');
-const backMain = document.getElementById('back-main');
+const canvasBack  = document.getElementById('canvas-back');
+const frontBlur   = document.getElementById('front-blur');
+const frontMain   = document.getElementById('front-main');
+const backBlur    = document.getElementById('back-blur');
+const backMain    = document.getElementById('back-main');
 
 /* ─── CANVAS STATE ──────────────────────────────────────────── */
 let loadedFront = 1;
-let loadedBack = 2;
+let loadedBack  = 2;
 
 function setFront(key) {
     if (loadedFront === key) return;
@@ -81,9 +86,10 @@ function setBack(key) {
 }
 
 /**
- * Set the reveal clip on the front canvas.
- * progress 0 = front fully visible; 1 = front fully clipped (back image shows).
- * Clips from bottom upward (split line sweeps up).
+ * Устанавливает clip-path на front-canvas.
+ * progress 0 = front полностью виден (текущая картинка).
+ * progress 1 = front полностью скрыт (видна back-картинка).
+ * Split-line движется снизу вверх.
  */
 function setReveal(progress) {
     if (progress <= 0) {
@@ -96,18 +102,19 @@ function setReveal(progress) {
 
 /* ─── SECTION METADATA ──────────────────────────────────────── */
 /*
- * sectionMeta is an array where:
- *   [0] = virtual INTRO entry (img=1, nextImg=2)
- *         lastTB = sec-1's firstTB (triggers the 1→2 split)
- *   [1..5] = real DOM sections read from data-img / data-next-img
+ * Только реальные DOM-секции. Нет виртуального intro-entry —
+ * intro описывается через transitionsMeta[0] (isIntro=true).
  *
- * For each real section:
- *   img      : key for the image shown during the section
- *   nextImg  : key for the image to reveal (null = no more transitions)
- *   lastTB   : the trigger element (top hitting viewport top starts the reveal)
- *   firstTB  : used for title parking and scroll invite
+ * Поля:
+ *   el        — DOM-элемент секции
+ *   img       — ключ картинки секции (начало сцены)
+ *   nextImg   — ключ следующей картинки (null = финальная секция)
+ *   firstTB   — [data-first-textbox] элемент
+ *   lastTB    — [data-last-textbox] элемент
+ *   stickyEl  — .section-sticky-canvas
+ *   inviteEl  — .scroll-invite
  */
-let sectionMeta = [];
+let sectionsMeta = [];
 
 function parseImgKey(str) {
     if (str === null || str === undefined) return null;
@@ -115,26 +122,88 @@ function parseImgKey(str) {
     return isNaN(n) ? str : n;
 }
 
-function buildSectionMeta() {
-    sectionMeta = sections.map(sec => {
-        const imgKey = sec.dataset.img;
-        const nextRaw = sec.dataset.nextImg;
-        const nextKey = (nextRaw === 'none' || nextRaw === undefined) ? null : nextRaw;
-        return {
-            el: sec,
-            img: parseImgKey(imgKey),
-            nextImg: parseImgKey(nextKey),
-            lastTB: sec.querySelector('[data-last-textbox]'),
-            firstTB: sec.querySelector('[data-first-textbox]'),
-            stickyEl: sec.querySelector('.section-sticky-canvas'),
-            inviteEl: sec.querySelector('.scroll-invite'),
-            titleParked: false,
-            inviteHidden: false,
-        };
-    });
+function buildSectionsMeta() {
+    sectionsMeta = sections.map(sec => ({
+        el:             sec,
+        img:            parseImgKey(sec.dataset.img),
+        nextImg:        parseImgKey(
+                            (sec.dataset.nextImg === 'none' || sec.dataset.nextImg === undefined)
+                                ? null
+                                : sec.dataset.nextImg
+                        ),
+        firstTB:        sec.querySelector('[data-first-textbox]'),
+        lastTB:         sec.querySelector('[data-last-textbox]'),
+        stickyEl:       sec.querySelector('.section-sticky-canvas'),
+        titleEl:        sec.querySelector('.section-title'),
+        inviteEl:       sec.querySelector('.scroll-invite'),
+        titleParked:    false,
+        inviteHidden:   false,
+    }));
 }
 
-/* ─── PARALLAX ──────────────────────────────────────────────── */
+/* ─── TRANSITION METADATA ───────────────────────────────────── */
+/*
+ * Каждый transition — это переход между двумя сценами.
+ *
+ * Поля:
+ *   fromSection     — sectionsMeta-запись, откуда уходим (null для intro)
+ *   toSection       — sectionsMeta-запись, куда приходим
+ *   fromImg         — ключ картинки, которая клипируется (front)
+ *   toImg           — ключ картинки, которая появляется (back)
+ *   triggerEl       — элемент-триггер (lastTB fromSection); null для intro
+ *   isIntro         — true только для первого перехода (интро → секция-1)
+ *
+ * Логика построения:
+ *   [0] intro → sec-1: fromSection=null, fromImg=1, toImg=sec[0].nextImg (= 2)
+ *                       интро всегда img 1, первая content-сцена — img 2
+ *   [1] sec-1 → sec-2: fromSection=sec[0], fromImg=sec[0].img, toImg=sec[0].nextImg
+ *   ...и т.д. пока у секции есть nextImg
+ */
+let transitionsMeta = [];
+
+function buildTransitionsMeta() {
+    transitionsMeta = [];
+
+    // Переход 0: интро (img 1) → первая content-сцена (img = sectionsMeta[0].img).
+    // Прогресс = scrollY / REVEAL_SCROLL_PX.
+    // toImg берётся из data-img секции, а НЕ из data-next-img,
+    // чтобы не дублировать первый переход с обычными sec-transitions.
+    if (sectionsMeta.length > 0) {
+        transitionsMeta.push({
+            fromSection: null,
+            toSection:   sectionsMeta[0],
+            fromImg:     1,
+            toImg:       sectionsMeta[0].img,  // = 2 после обновления HTML
+            triggerEl:   null,
+            isIntro:     true,
+        });
+    }
+
+    // Переходы sec[i] → sec[i+1]: fromImg=sec[i].img, toImg=sec[i+1].img.
+    // triggerEl = sec[i].lastTB.
+    // Нет зависимости от data-next-img — только от img-ключей соседних секций.
+    for (let i = 0; i < sectionsMeta.length - 1; i++) {
+        transitionsMeta.push({
+            fromSection: sectionsMeta[i],
+            toSection:   sectionsMeta[i + 1],
+            fromImg:     sectionsMeta[i].img,
+            toImg:       sectionsMeta[i + 1].img,
+            triggerEl:   sectionsMeta[i].lastTB,
+            isIntro:     false,
+        });
+    }
+}
+
+/* ─── ПАРАЛЛАКС ─────────────────────────────────────────────── */
+/*
+ * Мягкий вертикальный сдвиг front-изображения.
+ * Амплитуда PARALLAX_PX должна оставаться небольшой.
+ *
+ * Во время intro-transition параллакс отключён (progress=0),
+ * чтобы не конфликтовать со split-reveal.
+ * Во время sec-transition параллакс привязан к fromSection-секции.
+ * На back-image параллакс не применяется.
+ */
 const PARALLAX_PX = 28;
 
 function applyParallax(imgEl, progress) {
@@ -143,11 +212,97 @@ function applyParallax(imgEl, progress) {
     imgEl.style.transform = 'translateY(' + shift.toFixed(1) + 'px)';
 }
 
+/**
+ * Вычисляет прогресс параллакса для секции.
+ * Возвращает число 0..1 (сколько секции прокручено в viewport).
+ */
+function sectionParallaxProgress(secMeta) {
+    if (!secMeta || !secMeta.el) return 0;
+    const r = secMeta.el.getBoundingClientRect();
+    const scrolledIn = -r.top;
+    const maxScroll  = Math.max(1, secMeta.el.offsetHeight - cachedVH);
+    return Math.min(1, Math.max(0, scrolledIn / maxScroll));
+}
+
+/* ─── INCOMING TEXT HANDOFF ─────────────────────────────────── */
+/*
+ * При reveal-переходе:
+ *   firstTB  входящей секции анимируется снизу (opacity + translateY).
+ *   titleEl  входящей секции следует за split-line (top = (1-p)*cachedVH).
+ *
+ * firstTB:
+ *   Диапазон revealProgress 0.7 → 1.0 → incomingTextProgress 0 → 1.
+ *   Стартовый сдвиг = расстояние от текущей позиции firstTB до нижнего
+ *   края viewport, захваченное один раз в начале анимации (incomingTextProgress > 0).
+ *
+ * titleEl:
+ *   top = max(0, (1-revealProgress) * cachedVH) → ехать вверх вслед за split-line.
+ *   При revealProgress=1 (top=0): force-park через .title-parked.
+ *
+ * Inline-стили firstTB очищаются через clearIncomingEntry().
+ * Inline-стили titleEl очищаются при force-park.
+ */
+
+function applyIncomingEntry(secMeta, progress, startShift) {
+    if (!secMeta || !secMeta.firstTB) return;
+    const shift = startShift !== undefined ? startShift : 0;
+    const ty    = ((1 - progress) * shift).toFixed(1);
+    secMeta.firstTB.style.opacity    = progress.toFixed(3);
+    secMeta.firstTB.style.transform  = 'translateY(' + ty + 'px)';
+    secMeta.firstTB.style.transition = 'none';
+}
+
+function clearIncomingEntry(secMeta) {
+    // Очищает только firstTB; titleEl управляется title-split-follow.
+    if (!secMeta || !secMeta.firstTB) return;
+    secMeta.firstTB.style.opacity    = '';
+    secMeta.firstTB.style.transform  = '';
+    secMeta.firstTB.style.transition = '';
+}
+
+/**
+ * Анимирует заголовок входящей секции вслед за split-line.
+ * revealProgress 0→1: top идёт от cachedVH до 0.
+ * При revealProgress=1 выполняет force-park (добавляет .title-parked).
+ */
+function applyTitleSplitFollow(secMeta, revealProgress) {
+    if (!secMeta || !secMeta.titleEl || !secMeta.stickyEl) return;
+    const splitTop = Math.max(0, (1 - revealProgress) * cachedVH);
+    const t        = secMeta.titleEl;
+    if (revealProgress >= 1) {
+        // Reveal завершён — паркуем заголовок через CSS-класс.
+        t.style.top        = '';
+        t.style.bottom     = '';
+        t.style.transition = '';
+        if (!secMeta.titleParked) {
+            secMeta.titleParked = true;
+            secMeta.stickyEl.classList.add('title-parked');
+        }
+    } else {
+        // Следуем за split-line.
+        t.style.top        = splitTop.toFixed(0) + 'px';
+        t.style.bottom     = 'auto';
+        t.style.transition = 'none';
+    }
+}
+
+/**
+ * Сбрасывает title-split-follow стили (при скролле вверх / выходе из transition).
+ * Сам парк/анпарк потом управляется updateTitle().
+ */
+function clearTitleSplitFollow(secMeta) {
+    if (!secMeta || !secMeta.titleEl) return;
+    const t = secMeta.titleEl;
+    t.style.top        = '';
+    t.style.bottom     = '';
+    t.style.transition = '';
+}
+
 /* ─── TITLE PARKING ─────────────────────────────────────────── */
 /*
- * CSS handles the animation; JS toggles .title-parked on the sticky canvas.
- * Park: firstTB top <= 0 (textbox has scrolled above viewport top).
- * Unpark: firstTB top > parkThreshold (generous hysteresis for scroll-up).
+ * CSS управляет анимацией; JS только переключает .title-parked.
+ * Парковка: firstTB.top <= 0 (textbox вышел за верх viewport).
+ * Отпарковка: firstTB.top > PARK_THRESHOLD (гистерезис для скролла вверх).
  */
 const PARK_THRESHOLD = cachedVH * 0.85;
 
@@ -177,63 +332,56 @@ function updateScrollInvite(meta) {
     }
 }
 
-/* ─── INTRO VISIBILITY ──────────────────────────────────────── */
+/* ─── INTRO OVERLAY ─────────────────────────────────────────── */
 /*
- * RULE: The intro overlay is visible ONLY in the top zone of the page.
+ * Интро-оверлей видим только в верхней зоне страницы:
+ *   scrollY < INTRO_FADE_END   → полностью видим (opacity 1)
+ *   INTRO_FADE_END < scrollY   → фейдит, затем dismiss
  *
- * - While scrollY < INTRO_FADE_END    → fully visible (opacity 1)
- * - INTRO_FADE_END < scrollY < INTRO_GONE → fades out linearly
- * - scrollY >= INTRO_GONE             → hidden, flag set
- * - On scroll UP: does NOT reappear, UNLESS scrollY drops back below INTRO_RESTORE
- *
- * This prevents the intro from popping up every time the user scrolls up a bit.
- * It only returns when the user consciously goes back to the very top.
+ * После dismiss не возвращается, пока пользователь не вернётся
+ * почти в самый верх (scrollY <= INTRO_RESTORE).
  */
 const INTRO_FADE_START = 0;
-const INTRO_FADE_END = cachedVH * 0.4;
-const INTRO_RESTORE = cachedVH * 0.02;
+const INTRO_FADE_END   = cachedVH * 0.4;
+const INTRO_RESTORE    = cachedVH * 0.02;
 
-let introDismissed = false;   // true once intro has been fully scrolled past
+let introDismissed = false;
 
 function updateIntro() {
     if (!introOverlay) return;
     const sy = window.scrollY;
 
-    // Once dismissed, only restore if user scrolls almost to the very top
     if (introDismissed) {
         if (sy <= INTRO_RESTORE) {
             introDismissed = false;
             introOverlay.style.opacity = '1';
             if (introHint) introHint.style.opacity = '0.7';
         }
-        return;  // otherwise do nothing — stay hidden
+        return;
     }
 
-    // Compute opacity based purely on scrollY (no firstTB dependency)
     let opacity;
     if (sy <= INTRO_FADE_START) {
         opacity = 1;
     } else if (sy >= INTRO_FADE_END) {
         opacity = 0;
-        introDismissed = true;   // crossed the threshold — dismiss
+        introDismissed = true;
     } else {
         opacity = 1 - (sy - INTRO_FADE_START) / (INTRO_FADE_END - INTRO_FADE_START);
     }
 
     introOverlay.style.opacity = opacity.toFixed(3);
 
-    // Scroll hint fades earlier (disappears at 40% of the fade range)
     if (introHint) {
         const hintFrac = Math.max(0, 1 - (sy - INTRO_FADE_START) / ((INTRO_FADE_END - INTRO_FADE_START) * 0.4));
         introHint.style.opacity = (hintFrac * 0.7).toFixed(3);
     }
 
-    // Show/hide the compact top trigger (appears when intro is fully dismissed)
     if (topTrigger) topTrigger.classList.toggle('is-visible', introDismissed);
 }
 
-/* ─── MAIN FRAME ────────────────────────────────────────────── */
-// Scroll range over which the split-line reveal animation plays
+/* ─── ОСНОВНОЙ ФРЕЙМ ────────────────────────────────────────── */
+// Дистанция прокрутки, на которой разворачивается весь split-reveal
 const REVEAL_SCROLL_PX = cachedVH * 0.80;
 
 let ticking = false;
@@ -241,82 +389,133 @@ let ticking = false;
 function onFrame() {
     ticking = false;
 
-    // ── Intro fade ──
+    // ── Интро-оверлей ──
     updateIntro();
 
-    // ── Walk transitions to find current active image + next + reveal progress ──
+    // ── Transition-walk: определяем активный transition и прогресс reveal ──
     //
-    // sectionMeta traversal:
-    //   For each entry, check its "lastTB" element.
-    //   If lastTB top > 0      → haven't reached this trigger yet, break
-    //   If lastTB top <= 0     → compute reveal progress
-    //   If progress < 1        → reveal in progress, break
-    //   If progress == 1       → fully revealed, advance to next entry, continue
+    // Перебираем transitionsMeta по порядку.
+    // Для каждого transition вычисляем revealProgress:
+    //   - isIntro: прогресс = scrollY / REVEAL_SCROLL_PX
+    //   - обычный: прогресс = -triggerEl.getBoundingClientRect().top / REVEAL_SCROLL_PX
     //
-    // Default: start with intro (index 0), image 1
-    let activeImg = 1;
-    let nextImg = 2;
-    let reveal = 0;
-    let activeSec = 0;
+    // Если progress < 1 → этот transition активен, break.
+    // Если progress >= 1 → reveal завершён, activeImg = toImg, продолжаем.
+    // После цикла: activeImg = картинка стабильной сцены.
 
-    for (let i = 0; i < sectionMeta.length; i++) {
-        const meta = sectionMeta[i];
-        if (!meta.lastTB) continue;   // safety: skip entries without a trigger element
+    let activeImg    = 1;          // начальное состояние — всегда img 1 (интро)
+    let revealProgress = 0;
+    let activeTransition = transitionsMeta.length > 0 ? transitionsMeta[0] : null;
 
-        const trigTop = meta.lastTB.getBoundingClientRect().top;
+    for (let i = 0; i < transitionsMeta.length; i++) {
+        const tr = transitionsMeta[i];
 
-        if (trigTop > 0) {
-            // Haven't reached this trigger yet — this entry's image is active
-            activeImg = meta.img;
-            nextImg = meta.nextImg;
-            reveal = 0;
-            activeSec = i;
-            break;
+        let progress;
+        if (tr.isIntro) {
+            progress = Math.min(1, Math.max(0, window.scrollY / REVEAL_SCROLL_PX));
+        } else {
+            if (!tr.triggerEl) continue;  // нет триггера → пропускаем
+            const trigTop = tr.triggerEl.getBoundingClientRect().top;
+            progress = Math.min(1, Math.max(0, -trigTop / REVEAL_SCROLL_PX));
         }
-
-        // Trigger element's top is at or above viewport top
-        const progress = Math.min(1, Math.max(0, -trigTop / REVEAL_SCROLL_PX));
 
         if (progress < 1) {
-            // Reveal in progress
-            activeImg = meta.img;
-            nextImg = meta.nextImg;
-            reveal = progress;
-            activeSec = i;
+            // Этот transition активен прямо сейчас
+            activeTransition = tr;
+            activeImg        = tr.fromImg;
+            revealProgress   = progress;
             break;
         }
 
-        // Fully revealed — advance to next entry
-        const nextEntryImg = meta.nextImg !== null ? meta.nextImg : meta.img;
-        const nextEntryNext = (i + 1 < sectionMeta.length) ? sectionMeta[i + 1].nextImg : null;
-        activeImg = nextEntryImg;
-        nextImg = nextEntryNext;
-        reveal = 0;
-        activeSec = i + 1;
-        // Continue loop: check if the next entry has also been fully revealed
+        // Transition завершён — activeImg становится toImg
+        activeImg        = tr.toImg;
+        activeTransition = (i + 1 < transitionsMeta.length) ? transitionsMeta[i + 1] : null;
+        revealProgress   = 0;
+        // Продолжаем: возможно следующий transition тоже завершён
     }
 
-    // ── Update image canvases ──
-    setFront(activeImg);
-    setBack(nextImg !== null ? nextImg : activeImg);
-    setReveal(reveal);
+    // Определяем back-img: toImg активного transition, или сам activeImg если нет перехода
+    const backImg = (activeTransition !== null) ? activeTransition.toImg : activeImg;
 
-    // ── Parallax on front image (skip virtual intro entry with no DOM el) ──
-    const clampedIdx = Math.min(activeSec, sectionMeta.length - 1);
-    const activeSecMeta = sectionMeta[clampedIdx];
-    if (activeSecMeta && activeSecMeta.el) {
-        const r = activeSecMeta.el.getBoundingClientRect();
-        const scrolledIn = -r.top;
-        const maxScroll = Math.max(1, activeSecMeta.el.offsetHeight - cachedVH);
-        applyParallax(frontMain, Math.min(1, Math.max(0, scrolledIn / maxScroll)));
+    // ── Обновляем canvas ──
+    setFront(activeImg);
+    setBack(backImg !== null ? backImg : activeImg);
+    setReveal(revealProgress);
+
+    // ── Параллакс на front-image ──
+    //
+    // Интро-transition: параллакс выключен (не конфликтует со split-reveal).
+    // Sec-transition (reveal идёт): параллакс по fromSection.
+    // Стабильная сцена (reveal=0): параллакс по toSection предыдущего (= fromSection текущего).
+    //
+    // «Текущая секция для параллакса» — всегда fromSection активного transition,
+    // кроме случая когда все transitions завершены (конец страницы).
+    let parallaxSec = null;
+    if (activeTransition !== null) {
+        if (!activeTransition.isIntro) {
+            parallaxSec = activeTransition.fromSection;
+        }
+        // isIntro → parallaxSec остаётся null → параллакс = 0
+    } else {
+        // За пределами всех transitions (конец страницы) — берём последнюю секцию
+        parallaxSec = sectionsMeta.length > 0 ? sectionsMeta[sectionsMeta.length - 1] : null;
+    }
+
+    if (parallaxSec) {
+        applyParallax(frontMain, sectionParallaxProgress(parallaxSec));
+    } else {
+        // Интро или нет секции — сбрасываем параллакс без скачка
+        frontMain.style.transform = 'translateY(0px)';
     }
     backMain.style.transform = 'none';
 
-    // ── Title + scroll invite for visible sections ──
-    sectionMeta.forEach(function (meta) {
-        if (!meta.el) return;   // skip virtual intro entry
+    // ── Incoming text handoff ──
+    //
+    // firstTB: появляется снизу в диапазоне revealProgress 0.7→1.0.
+    //   Стартовый сдвиг = max(0, cachedVH - firstTB.top), снимается один раз
+    //   при первом ненулевом incomingTextProgress и кэшируется в transition._tbShift.
+    //
+    // titleEl: ехать за split-line с top=(1-revealProgress)*cachedVH.
+    //   Force-park при revealProgress=1.
+    let incomingSec = null;
+    if (activeTransition && activeTransition.toSection) {
+        incomingSec = activeTransition.toSection;
+        const itp = Math.min(1, Math.max(0, (revealProgress - 0.7) / 0.3));
+
+        // firstTB: кэшируем стартовый сдвиг при первом появлении
+        if (itp > 0 && activeTransition._tbShift === undefined) {
+            const tbTop = incomingSec.firstTB
+                ? incomingSec.firstTB.getBoundingClientRect().top
+                : cachedVH;
+            activeTransition._tbShift = Math.max(0, cachedVH - tbTop);
+        }
+        const shift = (itp > 0) ? (activeTransition._tbShift || 0) : 0;
+        applyIncomingEntry(incomingSec, itp, shift);
+
+        // titleEl: следует за split-line
+        applyTitleSplitFollow(incomingSec, revealProgress);
+
+        // Очищаем стили остальных секций
+        sectionsMeta.forEach(function (m) {
+            if (m !== incomingSec) {
+                clearIncomingEntry(m);
+                clearTitleSplitFollow(m);
+            }
+        });
+    } else {
+        sectionsMeta.forEach(function (m) {
+            clearIncomingEntry(m);
+            clearTitleSplitFollow(m);
+        });
+    }
+
+    // ── Title parking + scroll invite для видимых секций ──
+    //
+    // Пропускаем incomingSec пока идёт reveal (её title управляется split-follow).
+    sectionsMeta.forEach(function (meta) {
         const r = meta.el.getBoundingClientRect();
         if (r.bottom < 0 || r.top > cachedVH * 1.5) return;
+        if (meta === incomingSec) return;
         updateTitle(meta);
         updateScrollInvite(meta);
     });
@@ -334,7 +533,7 @@ window.addEventListener('scroll', requestTick, { passive: true });
 /* ─── REVIEWS CAROUSEL ──────────────────────────────────────── */
 (function initReviews() {
     var track = document.getElementById('reviews-track');
-    var dots = Array.from(document.querySelectorAll('.reviews-dots .dot'));
+    var dots  = Array.from(document.querySelectorAll('.reviews-dots .dot'));
     if (!track) return;
 
     var total = track.querySelectorAll('.review-slide').length;
@@ -345,32 +544,32 @@ window.addEventListener('scroll', requestTick, { passive: true });
         current = Math.max(0, Math.min(total - 1, idx));
         var w = track.parentElement.offsetWidth;
         track.style.transition = animate ? '' : 'none';
-        track.style.transform = 'translateX(' + (-current * w) + 'px)';
+        track.style.transform  = 'translateX(' + (-current * w) + 'px)';
         dots.forEach(function (d, i) { d.classList.toggle('dot--active', i === current); });
     }
 
     function dragStart(x) { dragging = true; startX = x; dragDX = 0; track.classList.add('is-dragging'); }
-    function dragMove(x) {
+    function dragMove(x)  {
         if (!dragging) return;
         dragDX = x - startX;
         track.style.transition = 'none';
-        track.style.transform = 'translateX(' + (-current * track.parentElement.offsetWidth + dragDX) + 'px)';
+        track.style.transform  = 'translateX(' + (-current * track.parentElement.offsetWidth + dragDX) + 'px)';
     }
     function dragEnd() {
         if (!dragging) return;
         dragging = false;
         track.classList.remove('is-dragging');
-        if (dragDX < -50) goTo(current + 1);
-        else if (dragDX > 50) goTo(current - 1);
-        else goTo(current);
+        if      (dragDX < -50) goTo(current + 1);
+        else if (dragDX >  50) goTo(current - 1);
+        else                   goTo(current);
     }
 
-    track.addEventListener('touchstart', function (e) { dragStart(e.touches[0].clientX); }, { passive: true });
-    track.addEventListener('touchmove', function (e) { dragMove(e.touches[0].clientX); }, { passive: true });
-    track.addEventListener('touchend', function () { dragEnd(); }, { passive: true });
-    track.addEventListener('mousedown', function (e) { e.preventDefault(); dragStart(e.clientX); });
+    track.addEventListener('touchstart', function (e) { dragStart(e.touches[0].clientX); },     { passive: true });
+    track.addEventListener('touchmove',  function (e) { dragMove(e.touches[0].clientX); },      { passive: true });
+    track.addEventListener('touchend',   function ()  { dragEnd(); },                           { passive: true });
+    track.addEventListener('mousedown',  function (e) { e.preventDefault(); dragStart(e.clientX); });
     window.addEventListener('mousemove', function (e) { if (dragging) dragMove(e.clientX); });
-    window.addEventListener('mouseup', function () { dragEnd(); });
+    window.addEventListener('mouseup',   function ()  { dragEnd(); });
     dots.forEach(function (d) { d.addEventListener('click', function () { goTo(parseInt(d.dataset.slide, 10)); }); });
     goTo(0, false);
 })();
@@ -395,14 +594,16 @@ window.addEventListener('scroll', requestTick, { passive: true });
 
 /* ─── INIT ──────────────────────────────────────────────────── */
 window.addEventListener('load', function () {
-    buildSectionMeta();
-    // Initial state: image 1 on front, image 2 on back
+    buildSectionsMeta();
+    buildTransitionsMeta();
+
+    // Начальное состояние: img 1 на фронте, img 2 (первый toImg) на back
     setFront(1);
-    setBack(2);
+    setBack(transitionsMeta.length > 0 ? transitionsMeta[0].toImg : 1);
     setReveal(0);
     onFrame();
 
-    // Top trigger: scroll to very top (intro will reappear once scrollY drops below INTRO_RESTORE)
+    // Top trigger: скролл в самый верх возвращает интро
     if (topTrigger) {
         topTrigger.addEventListener('click', function () {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -414,7 +615,8 @@ var resizeTimer;
 window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
-        buildSectionMeta();
+        buildSectionsMeta();
+        buildTransitionsMeta();
         onFrame();
     }, 200);
 }, { passive: true });
