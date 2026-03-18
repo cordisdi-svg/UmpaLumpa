@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="description"
+        content="Анастасия Швейкина — психолог, телесно-ориентированная терапия. Работаю с тревогой, усталостью, отношениями и внутренней критикой.">
+    <title>Анастасия Швейкина — Психолог</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Nunito:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════════════════════
+         FIXED IMAGE STAGE — 2 canvas system
+         canvas-back  (z=1): incoming image, always fully visible behind
+         canvas-front (z=2): current image, gets clip-path during reveal
+         JS swaps src on each canvas — no z-index juggling needed
+    ═══════════════════════════════════════════ -->
+    <div id="image-stage" aria-hidden="true">
+
+        <!-- Back canvas — incoming image (revealed through the clip) -->
+        <div class="stage-canvas" id="canvas-back">
+            <img class="panel-blur" id="back-blur" src="/2.jpg" alt="">
+            <img class="panel-main" id="back-main" src="/2.jpg" alt="">
+        </div>
+
+        <!-- Front canvas — current image (clips away during reveal) -->
+        <div class="stage-canvas" id="canvas-front">
+            <img class="panel-blur" id="front-blur" src="/1.jpg" alt="">
+            <img class="panel-main" id="front-main" src="/1.jpg" alt="">
+        </div>
+
+    </div><!-- #image-stage -->
+
+
+    <!-- ─── INTRO OVERLAY ─── -->
+    <div id="intro-overlay" class="intro-overlay">
+        <span class="intro-line" data-pos="top">Психолог</span>
+        <span class="intro-line" data-pos="middle">телесно-ориентированная психология</span>
+        <span class="intro-line" data-pos="bottom">Анастасия Швейкина</span>
+        <div class="intro-scroll-hint">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- ─── TOP TRIGGER — compact button shown when intro is dismissed ─── -->
+    <button id="top-trigger" class="top-trigger" aria-label="Вернуться наверх" title="Наверх">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+
+
+    <!-- ═══════════════════════════════════════════
+         SCROLL RIVER — text content + titles flow here
+         z-index above image-stage
+    ═══════════════════════════════════════════ -->
+    <main id="main">
+
+        <!-- ────────────────────────────────────────
+             SECTION 1 — img 2 — Я практикующий психолог
+        ──────────────────────────────────────── -->
+        <section class="page-section" id="section-1" data-img="1" data-next-img="2">
+
+            <div class="section-sticky-canvas">
+                <h2 class="section-title" id="title-1">
+                    Я практикующий психолог.<br>Работаю в телесно&#8209;ориентированном подходе.
+                </h2>
+            </div>
+
+            <div class="section-content">
+                <div class="content-spacer"></div>
+
+                <div class="textbox" data-first-textbox>
+                    <div class="scroll-invite"><span class="scroll-invite__arrow">↑</span></div>
+                    <p>Мой подход сочетает телесно-ориентированную терапию, работу с границами и поддержку мягких
+                        трансформаций через движение, дыхание и осознанность.</p>
+                    <p>Каждый клиент для меня — это живой процесс, в котором мы вместе находим путь к устойчивости,
+                        внутренней свободе и чувству опоры.</p>
+                </div>
+
+                <div class="textbox textbox--italic" data-last-textbox>
+                    <p>Для тех, кто устал жить «в голове», кто ищет путь к себе через тело, хочет научиться быть рядом
+                        со своими чувствами и строить более живые отношения с миром и людьми.</p>
+                </div>
+
+                <div class="reveal-spacer"></div>
+            </div>
+        </section>
+
+        <!-- ────────────────────────────────────────
+             SECTION 2 — img 3 — С какими запросами
+        ──────────────────────────────────────── -->
+        <section class="page-section" id="section-2" data-img="2" data-next-img="3">
+
+            <div class="section-sticky-canvas">
+                <h2 class="section-title" id="title-2">
+                    С какими запросами<br>ко мне можно обратиться?
+                </h2>
+            </div>
+
+            <div class="section-content">
+                <div class="content-spacer"></div>
+
+                <div class="textbox" data-first-textbox>
+                    <div class="scroll-invite"><span class="scroll-invite__arrow">↑</span></div>
+                    <ul>
+                        <li>Ты чувствуешь постоянное напряжение. Всё время нужно что-то контролировать, а расслабиться
+                            страшно.</li>
+                        <li>Ты часто устаёшь, даже если спишь и отдыхаешь. Кажется, что живёшь «на автопилоте».</li>
+                        <li>Тебе сложно в отношениях — не хватает тепла, понимания или поддержки.</li>
+                    </ul>
+                </div>
+
+                <div class="textbox" data-last-textbox>
+                    <ul>
+                        <li>Ты часто чувствуешь стыд и недовольство собой. Включается внутренняя критика — «я не
+                            справляюсь», «я не такая, как надо». Из-за этого трудно принимать решения, говорить «нет» и
+                            быть собой.</li>
+                        <li>Ты замечаешь, что прячешься от боли через привычки или зависимости — еду, алкоголь,
+                            контроль, трудоголизм — лишь бы не чувствовать пустоту.</li>
+                    </ul>
+                </div>
+
+                <div class="reveal-spacer"></div>
+            </div>
+        </section>
+
+        <!-- ────────────────────────────────────────
+             SECTION 3 — img 4 — Как проходит работа
+        ──────────────────────────────────────── -->
+        <section class="page-section" id="section-3" data-img="3" data-next-img="4">
+
+            <div class="section-sticky-canvas">
+                <h2 class="section-title" id="title-3">
+                    Как проходит<br>работа в сессиях?
+                </h2>
+            </div>
+
+            <div class="section-content">
+                <div class="content-spacer"></div>
+
+                <div class="textbox" data-first-textbox>
+                    <div class="scroll-invite"><span class="scroll-invite__arrow">↑</span></div>
+                    <p>На сессии мы мягко исследуем, что происходит внутри тебя прямо сейчас. То, что тело чувствует,
+                        часто говорит больше, чем слова — поэтому в работе много внимания уделяем дыханию, ощущениям и
+                        движениям.</p>
+                    <p>Я не даю готовых советов — мы вместе ищем, где именно теряется контакт с собой, и как вернуть
+                        опору внутри.</p>
+                    <p>Всё происходит в твоём темпе, без давления — так, чтобы было безопасно.</p>
+                </div>
+
+                <div class="textbox" data-last-textbox>
+                    <p>Постепенно ты начинаешь лучше чувствовать свои границы, понимать сигналы тела, принимать свои
+                        эмоции, а вместе с этим — восстанавливать доверие к себе и к жизни.</p>
+                    <p>Моя задача — быть рядом, поддерживать и помогать тебе возвращаться к себе. Не через усилие, а
+                        через контакт, внимание и бережность.</p>
+                </div>
+
+                <div class="reveal-spacer"></div>
+            </div>
+        </section>
+
+        <!-- ────────────────────────────────────────
+             SECTION 4 — img 5 — Форматы и стоимость
+        ──────────────────────────────────────── -->
+        <section class="page-section" id="section-4" data-img="4" data-next-img="5">
+
+            <div class="section-sticky-canvas">
+                <h2 class="section-title" id="title-4">
+                    Форматы сессий<br>и стоимость
+                </h2>
+            </div>
+
+            <div class="section-content">
+                <div class="content-spacer"></div>
+
+                <div class="textbox textbox--pricing" data-first-textbox data-last-textbox>
+                    <div class="scroll-invite"><span class="scroll-invite__arrow">↑</span></div>
+                    <div class="pricing-item">
+                        <h3 class="pricing-title">Первичная диагностическая сессия</h3>
+                        <p class="pricing-meta">30 минут</p>
+                        <p class="pricing-price">1 000 ₽</p>
+                    </div>
+                    <div class="pricing-divider"></div>
+                    <div class="pricing-item">
+                        <h3 class="pricing-title">Индивидуальная телесно-ориентированная терапия</h3>
+                        <p class="pricing-meta">60 минут</p>
+                        <p class="pricing-price">3 000 ₽</p>
+                    </div>
+                    <div class="pricing-divider"></div>
+                    <div class="pricing-item">
+                        <h3 class="pricing-title">Пакет консультаций</h3>
+                        <p class="pricing-meta">4 сессии</p>
+                        <p class="pricing-price">10 500 ₽</p>
+                    </div>
+                </div>
+
+                <div class="reveal-spacer"></div>
+            </div>
+        </section>
+
+        <!-- ────────────────────────────────────────
+             SECTION 5 — img p1 — Контакты
+        ──────────────────────────────────────── -->
+        <section class="page-section" id="section-5" data-img="5" data-next-img="p1">
+
+            <div class="section-sticky-canvas">
+                <h2 class="section-title" id="title-5">
+                    Остались вопросы?
+                </h2>
+            </div>
+
+            <div class="section-content">
+                <div class="content-spacer"></div>
+
+                <div class="textbox textbox--contacts" data-first-textbox data-last-textbox>
+                    <div class="scroll-invite"><span class="scroll-invite__arrow">↑</span></div>
+                    <p class="contacts-lead">Я всегда готова ответить на любой ваш вопрос</p>
+
+                    <a href="https://t.me/nastya_shveikina" class="contact-link contact-link--primary" target="_blank"
+                        rel="noopener">
+                        <span class="contact-link__icon">✈</span>
+                        <span>Написать в Telegram</span>
+                        <span class="contact-link__handle">@nastya_shveikina</span>
+                    </a>
+
+                    <p class="contacts-social-label">Социальные сети</p>
+
+                    <div class="social-links">
+                        <a href="https://www.instagram.com/_shveykina?igsh=MW9zcXI4NHczd2o2MQ%3D%3D&utm_source=qr"
+                            class="social-link" target="_blank" rel="noopener">
+                            <span class="social-link__name">Instagram*</span>
+                        </a>
+                        <a href="https://youtube.com/@shveykna_by?si=1AX9QafySpDZ3nwk" class="social-link"
+                            target="_blank" rel="noopener">
+                            <span class="social-link__name">YouTube</span>
+                        </a>
+                        <a href="https://t.me/nastyapsihologinya" class="social-link" target="_blank" rel="noopener">
+                            <span class="social-link__name">Telegram-канал</span>
+                        </a>
+                    </div>
+
+                    <p class="instagram-disclaimer">*Признана экстремистской организацией и запрещена на территории РФ.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ────────────────────────────────────────
+             REVIEWS
+        ──────────────────────────────────────── -->
+        <section class="reviews-section" id="reviews">
+            <h2 class="reviews-heading">Отзывы</h2>
+            <div class="reviews-track-wrapper">
+                <div class="reviews-track" id="reviews-track">
+                    <div class="review-slide"><img src="reviews/1.jpeg" alt="Отзыв 1" draggable="false"></div>
+                    <div class="review-slide"><img src="reviews/2.jpeg" alt="Отзыв 2" draggable="false"></div>
+                    <div class="review-slide"><img src="reviews/3.jpeg" alt="Отзыв 3" draggable="false"></div>
+                    <div class="review-slide"><img src="reviews/4.jpeg" alt="Отзыв 4" draggable="false"></div>
+                    <div class="review-slide"><img src="reviews/5.png" alt="Отзыв 5" draggable="false"></div>
+                </div>
+                <div class="reviews-dots" id="reviews-dots">
+                    <span class="dot dot--active" data-slide="0"></span>
+                    <span class="dot" data-slide="1"></span>
+                    <span class="dot" data-slide="2"></span>
+                    <span class="dot" data-slide="3"></span>
+                    <span class="dot" data-slide="4"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────────────────────────────────────────
+             FAQ
+        ──────────────────────────────────────── -->
+        <section class="faq-section" id="faq">
+            <h2 class="faq-heading">Частые вопросы</h2>
+            <div class="faq-list">
+
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Сколько длится одна сессия?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Обычно сессия длится 60 минут. При работе с более глубокими запросами возможно увеличение
+                            времени до 75–90 минут по предварительной договорённости.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Как часто нужно ходить на сессии?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Оптимально встречаться раз в неделю, чтобы изменения шли плавно и поддержка ощущалась
+                            стабильно. В некоторых случаях возможен формат раз в две недели.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Сколько сессий мне может понадобиться?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Это зависит от запроса: на точечные темы бывает достаточно 3–5 встреч, для работы с
+                            глубинными паттернами и травмами нужен более длительный процесс. Мы обсудим это на первой
+                            консультации.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Можно ли провести сессию онлайн?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Да, я работаю онлайн, если у вас есть тихое пространство и вы можете быть в контакте с телом.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Чем телесно-ориентированная терапия отличается от «обычной»?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Мы работаем не только через разговор, но и через ощущения, дыхание и мягкое движение. Это
+                            помогает быстрее добраться до истинных чувств и устойчиво внедрить изменения.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Что делать, если мне станет слишком тяжело на сессии?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Моя задача — не «ломать», а поддерживать. В любой момент можно замедлиться, сделать паузу,
+                            переключиться на опору или завершить упражнение.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Как подготовиться к первой встрече?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Достаточно прийти с тем, что сейчас волнует больше всего. Можно заранее записать свои вопросы
+                            и ожидания, чтобы было проще сформулировать запрос.</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <footer class="site-footer">
+            <p>© 2025 Анастасия Швейкина</p>
+            <a href="https://t.me/nastya_shveikina" target="_blank" rel="noopener">@nastya_shveikina</a>
+        </footer>
+
+    </main>
+
+    <script src="js/main.js"></script>
+</body>
+
+</html>
