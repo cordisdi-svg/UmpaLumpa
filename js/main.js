@@ -260,42 +260,50 @@ function clearIncomingEntry(secMeta) {
     secMeta.firstTB.style.transition = '';
 }
 
+/* ─── TITLE SPLIT-FOLLOW ─────────────────────────────────── */
+/*
+ * titleEl входящей секции едет строго ПОД split-line с зазором TITLE_GAP_PX.
+ * Позиционирование через inline `top` = splitLine + gap.
+ * `bottom` всегда `auto` пока активен split-follow.
+ *
+ * Размер title не меняется во время follow — паркед-уменьшенный стиль
+ * применяется только позже через updateTitle().
+ *
+ * Принцип clearTitleSplitFollow: не возвращать управление CSS раньше
+ * времени: если title ещё не запаркован — оставляем inline `top` нетронутым.
+ */
+const TITLE_GAP_PX = 12;
+
 /**
- * Анимирует заголовок входящей секции вслед за split-line.
- * revealProgress 0→1: top идёт от cachedVH до 0.
- * При revealProgress=1 выполняет force-park (добавляет .title-parked).
+ * Применяет следование за split-line.
+ * top = max(0, (1-revealProgress)*cachedVH + TITLE_GAP_PX)
+ * Без force-park — парковка всегда в updateTitle().
  */
 function applyTitleSplitFollow(secMeta, revealProgress) {
-    if (!secMeta || !secMeta.titleEl || !secMeta.stickyEl) return;
-    const splitTop = Math.max(0, (1 - revealProgress) * cachedVH);
+    if (!secMeta || !secMeta.titleEl) return;
+    const splitTop = (1 - revealProgress) * cachedVH;
+    const tTop     = Math.max(0, splitTop + TITLE_GAP_PX);
     const t        = secMeta.titleEl;
-    if (revealProgress >= 1) {
-        // Reveal завершён — паркуем заголовок через CSS-класс.
-        t.style.top        = '';
-        t.style.bottom     = '';
-        t.style.transition = '';
-        if (!secMeta.titleParked) {
-            secMeta.titleParked = true;
-            secMeta.stickyEl.classList.add('title-parked');
-        }
-    } else {
-        // Следуем за split-line.
-        t.style.top        = splitTop.toFixed(0) + 'px';
-        t.style.bottom     = 'auto';
-        t.style.transition = 'none';
-    }
+    t.style.top        = tTop.toFixed(0) + 'px';
+    t.style.bottom     = 'auto';
+    t.style.transition = 'none';
 }
 
 /**
- * Сбрасывает title-split-follow стили (при скролле вверх / выходе из transition).
- * Сам парк/анпарк потом управляется updateTitle().
+ * Не возвращаем CSS-управление раньше времени.
+ * - Если title уже в .title-parked → очищаем inline (CSS взял управление).
+ * - Если ещё нет → не трогаем; updateTitle() очистит при парковке.
  */
 function clearTitleSplitFollow(secMeta) {
     if (!secMeta || !secMeta.titleEl) return;
-    const t = secMeta.titleEl;
-    t.style.top        = '';
-    t.style.bottom     = '';
-    t.style.transition = '';
+    if (secMeta.titleParked) {
+        // CSS .title-parked взял управление — безопасно убрать inline стили
+        const t = secMeta.titleEl;
+        t.style.top        = '';
+        t.style.bottom     = '';
+        t.style.transition = '';
+    }
+    // Если не запаркован — оставляем inline `top` нетронутым до парковки
 }
 
 /* ─── TITLE PARKING ─────────────────────────────────────────── */
@@ -312,6 +320,12 @@ function updateTitle(meta) {
     if (!meta.titleParked && tbTop <= 0) {
         meta.titleParked = true;
         meta.stickyEl.classList.add('title-parked');
+        // Очистить inline top/bottom, оставшиеся от split-follow
+        if (meta.titleEl) {
+            meta.titleEl.style.top        = '';
+            meta.titleEl.style.bottom     = '';
+            meta.titleEl.style.transition = '';
+        }
     } else if (meta.titleParked && tbTop > PARK_THRESHOLD) {
         meta.titleParked = false;
         meta.stickyEl.classList.remove('title-parked');
@@ -480,7 +494,7 @@ function onFrame() {
     let incomingSec = null;
     if (activeTransition && activeTransition.toSection) {
         incomingSec = activeTransition.toSection;
-        const itp = Math.min(1, Math.max(0, (revealProgress - 0.7) / 0.3));
+        const itp = Math.min(1, Math.max(0, (revealProgress - 0.3) / 0.7));
 
         // firstTB: кэшируем стартовый сдвиг при первом появлении
         if (itp > 0 && activeTransition._tbShift === undefined) {
@@ -593,17 +607,32 @@ window.addEventListener('scroll', requestTick, { passive: true });
 })();
 
 /* ─── INIT ──────────────────────────────────────────────────── */
-window.addEventListener('load', function () {
+/*
+ * DOMContentLoaded — до первого paint браузера.
+ * Titles сразу выставляются за нижний край (overflow:hidden скрывает);
+ * CSS-дефолт bottom не виден до onFrame.
+ */
+document.addEventListener('DOMContentLoaded', function () {
     buildSectionsMeta();
     buildTransitionsMeta();
 
-    // Начальное состояние: img 1 на фронте, img 2 (первый toImg) на back
+    // Синхронно пре-позиционируем titles за нижний край viewport
+    sectionsMeta.forEach(function (meta) {
+        if (meta.titleEl) {
+            meta.titleEl.style.top        = (cachedVH + TITLE_GAP_PX) + 'px';
+            meta.titleEl.style.bottom     = 'auto';
+            meta.titleEl.style.transition = 'none';
+        }
+    });
+
     setFront(1);
     setBack(transitionsMeta.length > 0 ? transitionsMeta[0].toImg : 1);
     setReveal(0);
     onFrame();
+});
 
-    // Top trigger: скролл в самый верх возвращает интро
+// Top trigger — не критично, добавляется после load
+window.addEventListener('load', function () {
     if (topTrigger) {
         topTrigger.addEventListener('click', function () {
             window.scrollTo({ top: 0, behavior: 'smooth' });
