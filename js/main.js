@@ -4,13 +4,12 @@
  * КАРТА ИЗОБРАЖЕНИЙ: 1.jpg, 2.jpg, 3.jpg, 4.jpg, 5.jpg, p1.jpg
  *
  * СТРУКТУРА СТРАНИЦЫ:
- *   5 реальных секций (.page-section) + отдельная интро-фаза.
+ *   6 реальных секций (.page-section).
  *
  * МОДЕЛЬ ДАННЫХ:
- *   sectionsMeta[]   — описывает каждую из 5 секций (DOM + картинки)
+ *   sectionsMeta[]   — описывает каждую из 6 секций (DOM + картинки)
  *   transitionsMeta[]— описывает переходы между сценами:
- *       [0] intro-transition: интро → секция-1 (триггер = scrollY)
- *       [1..4] sec-transitions: секция N → секция N+1 (триггер = lastTB)
+ *       [0..4] sec-transitions: секция N → секция N+1 (триггер = lastTB)
  *
  * МЕХАНИКА REVEAL (одинакова для всех переходов):
  *   - Прогресс 0 → front-canvas полностью видим (текущая картинка)
@@ -18,7 +17,7 @@
  *   - Прогресс 1 → back-canvas стал «новым фронтом», JS меняет src
  *
  *   Для intro-transition:
- *     progress = clamp(scrollY / REVEAL_SCROLL_PX, 0, 1)
+ *     progress = clamp(scrollRoot.scrollTop / REVEAL_SCROLL_PX, 0, 1)
  *
  *   Для sec-transitions:
  *     progress = clamp(-lastTB.getBoundingClientRect().top / REVEAL_SCROLL_PX, 0, 1)
@@ -28,9 +27,9 @@
  *   CSS управляет анимацией; JS переключает .title-parked на sticky-canvas.
  *   Парковка: firstTB.top <= 0. Отпарковка при скролле вверх.
  *
- * INTRO OVERLAY:
- *   Фейдит на основе scrollY, не зависит от textbox.
- *   Не пересматривается при скролле вниз после dismiss.
+ * TITLE PARKING:
+ *   CSS управляет анимацией; JS переключает .title-parked на sticky-canvas.
+ *   Парковка: firstTB.top <= 0. Отпарковка при скролле вверх.
  */
 
 'use strict';
@@ -38,19 +37,15 @@
 
 /* ─── STAGE METRICS (NEW SYSTEM) ────────────────────────────── */
 let stageH = 0;
+let lastViewportWidth = window.innerWidth;
 const metrics = {
     revealPx: 0,
-    parkThreshold: 0,
-    introFadeEnd: 0,
-    introRestore: 0
+    parkThreshold: 0
 };
 
 function getStageHeight() {
     const sticky = document.querySelector('.section-sticky-canvas');
     if (sticky) return sticky.getBoundingClientRect().height;
-
-    const intro = document.getElementById('intro-overlay');
-    if (intro) return intro.getBoundingClientRect().height;
 
     return window.innerHeight; // Fallback
 }
@@ -59,8 +54,6 @@ function recalcMetrics() {
     stageH = Math.max(getStageHeight(), 1);
     metrics.revealPx = stageH * 0.80;
     metrics.parkThreshold = stageH * 0.85;
-    metrics.introFadeEnd = stageH * 0.40;
-    metrics.introRestore = stageH * 0.02;
 }
 
 /* ─── IMAGE SOURCES ─────────────────────────────────────────── */
@@ -74,10 +67,11 @@ const IMG = {
 };
 
 /* ─── DOM REFS ──────────────────────────────────────────────── */
-const introOverlay = document.getElementById('intro-overlay');
-const introHint = introOverlay ? introOverlay.querySelector('.intro-scroll-hint') : null;
+const scrollRoot = document.getElementById('scroll-root');
 const topTrigger = document.getElementById('top-trigger');
 const sections = Array.from(document.querySelectorAll('.page-section'));
+
+const imageStage = document.getElementById('image-stage');
 
 const canvasFront = document.getElementById('canvas-front');
 const canvasBack = document.getElementById('canvas-back');
@@ -175,30 +169,12 @@ function buildSectionsMeta() {
  *   isIntro         — true только для первого перехода (интро → секция-1)
  *
  * Логика построения:
- *   [0] intro → sec-1: fromSection=null, fromImg=1, toImg=sec[0].nextImg (= 2)
- *                       интро всегда img 1, первая content-сцена — img 2
- *   [1] sec-1 → sec-2: fromSection=sec[0], fromImg=sec[0].img, toImg=sec[0].nextImg
- *   ...и т.д. пока у секции есть nextImg
+ *   Переходы sec[i] → sec[i+1]: fromImg=sec[i].img, toImg=sec[i+1].img.
  */
 let transitionsMeta = [];
 
 function buildTransitionsMeta() {
     transitionsMeta = [];
-
-    // Переход 0: интро (img 1) → первая content-сцена (img = sectionsMeta[0].img).
-    // Прогресс = scrollY / REVEAL_SCROLL_PX.
-    // toImg берётся из data-img секции, а НЕ из data-next-img,
-    // чтобы не дублировать первый переход с обычными sec-transitions.
-    if (sectionsMeta.length > 0) {
-        transitionsMeta.push({
-            fromSection: null,
-            toSection: sectionsMeta[0],
-            fromImg: 1,
-            toImg: sectionsMeta[0].img,  // = 2 после обновления HTML
-            triggerEl: null,
-            isIntro: true,
-        });
-    }
 
     // Переходы sec[i] → sec[i+1]: fromImg=sec[i].img, toImg=sec[i+1].img.
     // triggerEl = sec[i].lastTB.
@@ -372,49 +348,22 @@ function updateScrollInvite(meta) {
 /* ─── INTRO OVERLAY ─────────────────────────────────────────── */
 /*
  * Интро-оверлей видим только в верхней зоне страницы:
- *   scrollY < INTRO_FADE_END   → полностью видим (opacity 1)
- *   INTRO_FADE_END < scrollY   → фейдит, затем dismiss
+ *   sy < INTRO_FADE_END   → полностью видим (opacity 1)
+ *   INTRO_FADE_END < sy   → фейдит, затем dismiss
  *
  * После dismiss не возвращается, пока пользователь не вернётся
- * почти в самый верх (scrollY <= INTRO_RESTORE).
+ * почти в самый верх (sy <= INTRO_RESTORE).
  */
 const INTRO_FADE_START = 0;
 
 let introDismissed = false;
 
 function updateIntro() {
-    if (!introOverlay) return;
-    const sy = window.scrollY;
-
-    if (introDismissed) {
-        if (sy <= metrics.introRestore) {
-            introDismissed = false;
-            introOverlay.style.opacity = '1';
-            if (introHint) introHint.style.opacity = '0.7';
-        }
-        return;
+    // Reveal system handles intro through Scene 1 now
+    if (topTrigger) {
+        const sy = scrollRoot ? scrollRoot.scrollTop : 0;
+        topTrigger.classList.toggle('is-visible', sy > stageH * 0.1);
     }
-
-    let opacity;
-    if (sy <= INTRO_FADE_START) {
-        opacity = 1;
-    } else if (sy >= metrics.introFadeEnd) {
-        opacity = 0;
-        introDismissed = true;
-    } else {
-        const range = (metrics.introFadeEnd - INTRO_FADE_START) || 1;
-        opacity = 1 - (sy - INTRO_FADE_START) / range;
-    }
-
-    introOverlay.style.opacity = opacity.toFixed(3);
-
-    if (introHint) {
-        const range = (metrics.introFadeEnd - INTRO_FADE_START) || 1;
-        const hintFrac = Math.max(0, 1 - (sy - INTRO_FADE_START) / (range * 0.4));
-        introHint.style.opacity = (hintFrac * 0.7).toFixed(3);
-    }
-
-    if (topTrigger) topTrigger.classList.toggle('is-visible', introDismissed);
 }
 
 /* ─── ОСНОВНОЙ ФРЕЙМ ────────────────────────────────────────── */
@@ -426,37 +375,20 @@ let ticking = false;
 function onFrame() {
     ticking = false;
 
-    // ── Интро-оверлей ──
-    updateIntro();
-
-    // ── Transition-walk: определяем активный transition и прогресс reveal ──
-    //
-    // Перебираем transitionsMeta по порядку.
-    // Для каждого transition вычисляем revealProgress:
-    //   - isIntro: прогресс = scrollY / REVEAL_SCROLL_PX
-    //   - обычный: прогресс = -triggerEl.getBoundingClientRect().top / REVEAL_SCROLL_PX
-    //
-    // Если progress < 1 → этот transition активен, break.
-    // Если progress >= 1 → reveal завершён, activeImg = toImg, продолжаем.
     // После цикла: activeImg = картинка стабильной сцены.
 
-    let activeImg = 1;          // начальное состояние — всегда img 1 (интро)
+    const fallbackImg = sectionsMeta.length > 0 ? sectionsMeta[0].img : 1;
+    let activeImg = fallbackImg;
     let revealProgress = 0;
     let activeTransition = transitionsMeta.length > 0 ? transitionsMeta[0] : null;
 
     for (let i = 0; i < transitionsMeta.length; i++) {
         const tr = transitionsMeta[i];
 
-        let progress;
-        if (tr.isIntro) {
-            const range = metrics.revealPx || 1;
-            progress = Math.min(1, Math.max(0, window.scrollY / range));
-        } else {
-            if (!tr.triggerEl) continue;  // нет триггера → пропускаем
-            const trigTop = tr.triggerEl.getBoundingClientRect().top;
-            const range = metrics.revealPx || 1;
-            progress = Math.min(1, Math.max(0, -trigTop / range));
-        }
+        if (!tr.triggerEl) continue;  // нет триггера → пропускаем
+        const trigTop = tr.triggerEl.getBoundingClientRect().top;
+        const range = metrics.revealPx || 1;
+        const progress = Math.min(1, Math.max(0, -trigTop / range));
 
         if (progress < 1) {
             // Этот transition активен прямо сейчас
@@ -481,6 +413,11 @@ function onFrame() {
     setBack(backImg !== null ? backImg : activeImg);
     setReveal(revealProgress);
 
+    // Устойчивый режим первой сцены (object-position: top)
+    if (imageStage) {
+        imageStage.classList.toggle('is-first-scene', activeImg === 1);
+    }
+
     // ── Параллакс на front-image ──
     //
     // Интро-transition: параллакс выключен (не конфликтует со split-reveal).
@@ -491,10 +428,7 @@ function onFrame() {
     // кроме случая когда все transitions завершены (конец страницы).
     let parallaxSec = null;
     if (activeTransition !== null) {
-        if (!activeTransition.isIntro) {
-            parallaxSec = activeTransition.fromSection;
-        }
-        // isIntro → parallaxSec остаётся null → параллакс = 0
+        parallaxSec = activeTransition.fromSection;
     } else {
         // За пределами всех transitions (конец страницы) — берём последнюю секцию
         parallaxSec = sectionsMeta.length > 0 ? sectionsMeta[sectionsMeta.length - 1] : null;
@@ -519,24 +453,17 @@ function onFrame() {
     if (activeTransition && activeTransition.toSection) {
         incomingSec = activeTransition.toSection;
 
-        if (activeTransition.isIntro) {
-            // Интро: title едет за split-line, firstTB — без анимации
-            applyTitleSplitFollow(incomingSec, revealProgress);
-            // Сбрасываем любые inline-стили на firstTB, которые могли остаться
-            clearIncomingEntry(incomingSec);
-        } else {
-            // Обычный sec-transition: itp + title follow
-            const itp = Math.min(1, Math.max(0, (revealProgress - 0.3) / 0.7));
-            if (itp > 0 && activeTransition._tbShift === undefined) {
-                const tbTop = incomingSec.firstTB
-                    ? incomingSec.firstTB.getBoundingClientRect().top
-                    : stageH;
-                activeTransition._tbShift = Math.max(0, stageH - tbTop);
-            }
-            const shift = (itp > 0) ? (activeTransition._tbShift || 0) : 0;
-            applyIncomingEntry(incomingSec, itp, shift);
-            applyTitleSplitFollow(incomingSec, revealProgress);
+        // Обычный sec-transition: itp + title follow
+        const itp = Math.min(1, Math.max(0, (revealProgress - 0.3) / 0.7));
+        if (itp > 0 && activeTransition._tbShift === undefined) {
+            const tbTop = incomingSec.firstTB
+                ? incomingSec.firstTB.getBoundingClientRect().top
+                : stageH;
+            activeTransition._tbShift = Math.max(0, stageH - tbTop);
         }
+        const shift = (itp > 0) ? (activeTransition._tbShift || 0) : 0;
+        applyIncomingEntry(incomingSec, itp, shift);
+        applyTitleSplitFollow(incomingSec, revealProgress);
 
         // Очищаем стили остальных секций
         sectionsMeta.forEach(function (m) {
@@ -571,7 +498,9 @@ function requestTick() {
     }
 }
 
-window.addEventListener('scroll', requestTick, { passive: true });
+if (scrollRoot) {
+    scrollRoot.addEventListener('scroll', requestTick, { passive: true });
+}
 
 /* ─── REVIEWS CAROUSEL ──────────────────────────────────────── */
 (function initReviews() {
@@ -665,17 +594,29 @@ document.addEventListener('DOMContentLoaded', function () {
 window.addEventListener('load', function () {
     if (topTrigger) {
         topTrigger.addEventListener('click', function () {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (scrollRoot) {
+                scrollRoot.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         });
     }
 });
 
+function handleViewportUpdate() {
+    recalcMetrics();
+    buildSectionsMeta();
+    buildTransitionsMeta();
+    onFrame();
+}
+
 var resizeTimer;
 window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-        buildSectionsMeta();
-        buildTransitionsMeta();
-        onFrame();
-    }, 200);
+    if (Math.abs(window.innerWidth - lastViewportWidth) > 8) {
+        lastViewportWidth = window.innerWidth;
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(handleViewportUpdate, 200);
+    }
+}, { passive: true });
+
+window.addEventListener('orientationchange', function () {
+    setTimeout(handleViewportUpdate, 200);
 }, { passive: true });

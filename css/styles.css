@@ -39,6 +39,8 @@
 html {
     scroll-behavior: auto;
     overscroll-behavior: none;
+    height: 100%;
+    overflow: hidden;
 }
 
 body {
@@ -47,7 +49,8 @@ body {
     line-height: 1.7;
     color: var(--text-dark);
     background: #1a1108;
-    overflow-x: hidden;
+    height: 100%;
+    overflow: hidden;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -90,11 +93,27 @@ p+p {
 ═══════════════════════════════════════════════════════════════ */
 #image-stage {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: 100svh;
     z-index: 0;
     pointer-events: none;
     overflow: hidden;
     /* prevent blur from bleeding outside viewport */
+}
+
+#scroll-root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: 100svh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Two canvas layers — fixed z-index, no juggling */
@@ -144,24 +163,14 @@ p+p {
     z-index: 1;
 }
 
+/* Stable top-positioning for the very first scene */
+#image-stage.is-first-scene #canvas-front .panel-main {
+    object-position: top center;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    INTRO OVERLAY
 ═══════════════════════════════════════════════════════════════ */
-.intro-overlay {
-    position: fixed;
-    inset: 0;
-    height: var(--v-header-height);
-    z-index: 50;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    padding: clamp(2rem, 8svh, 5rem) 1.5rem;
-    pointer-events: none;
-    will-change: opacity;
-}
-
-
 
 .intro-line {
     display: block;
@@ -188,7 +197,6 @@ p+p {
     font-size: clamp(2rem, 8.5vw, 2.8rem);
     font-weight: 600;
 }
-
 
 /* ─── TOP TRIGGER ─── */
 /*
@@ -238,24 +246,7 @@ p+p {
     bottom: -0.75rem;
 }
 
-.intro-scroll-hint {
-    color: var(--on-image-color);
-    opacity: 0.7;
-    animation: bounce-hint 1.8s ease-in-out infinite;
-    margin-top: auto;
-}
-
-@keyframes bounce-hint {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(6px);
-    }
-}
+/* ─── SCROLL INVITE (Old hint moved to textbox) ─── */
 
 /* ═══════════════════════════════════════════════════════════════
    SCROLL RIVER (main)
@@ -308,6 +299,16 @@ p+p {
     will-change: transform;
 }
 
+/* Specific styling for the first scene title stack */
+.section-title--intro {
+    bottom: auto !important;
+    top: clamp(1rem, 5svh, 2.5rem) !important;
+    text-align: center !important;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 /* Title parked at top — JS adds .title-parked to .section-sticky-canvas */
 .section-sticky-canvas.title-parked {
     z-index: 50;
@@ -340,10 +341,18 @@ p+p {
     pointer-events: none;
 }
 
+.content-spacer--intro {
+    height: var(--v-header-height);
+}
+
 /* Spacer after last textbox — gives scroll room for the reveal animation */
 .reveal-spacer {
     height: calc(var(--v-header-height) * 0.8);
     pointer-events: none;
+}
+
+.reveal-spacer--intro {
+    height: calc(var(--v-header-height) * 0.4);
 }
 
 /* ═══════════════════════════════════════════════════════════════

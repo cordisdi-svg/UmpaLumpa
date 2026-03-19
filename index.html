@@ -40,32 +40,40 @@
     </div><!-- #image-stage -->
 
 
-    <!-- ─── INTRO OVERLAY ─── -->
-    <div id="intro-overlay" class="intro-overlay">
-        <span class="intro-line" data-pos="top">Психолог</span>
-        <span class="intro-line" data-pos="middle">телесно-ориентированная психология</span>
-        <span class="intro-line" data-pos="bottom">Анастасия Швейкина</span>
-        <div class="intro-scroll-hint">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                    stroke-linejoin="round" />
-            </svg>
-        </div>
-    </div>
-
-    <!-- ─── TOP TRIGGER — compact button shown when intro is dismissed ─── -->
-    <button id="top-trigger" class="top-trigger" aria-label="Вернуться наверх" title="Наверх">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </button>
-
+    <!-- ═══════════════════════════════════════════
+         SCROLL ROOT — container for scrollable content
+    ═══════════════════════════════════════════ -->
+    <div id="scroll-root">
 
     <!-- ═══════════════════════════════════════════
          SCROLL RIVER — text content + titles flow here
          z-index above image-stage
     ═══════════════════════════════════════════ -->
     <main id="main">
+
+        <!-- ────────────────────────────────────────
+             SECTION INTRO — img 1 — Анастасия Швейкина
+        ──────────────────────────────────────── -->
+        <section class="page-section" id="section-intro" data-img="1" data-next-img="2">
+
+            <div class="section-sticky-canvas">
+                <h1 class="section-title section-title--intro" id="title-intro">
+                    <span class="intro-line" data-pos="top">Психолог</span>
+                    <span class="intro-line" data-pos="middle">телесно-ориентированная психология</span>
+                    <span class="intro-line" data-pos="bottom">Анастасия Швейкина</span>
+                </h1>
+            </div>
+
+            <div class="section-content">
+                <div class="content-spacer content-spacer--intro"></div>
+
+                <div class="textbox" data-first-textbox data-last-textbox>
+                    <p>Для тех, кто устал жить «в голове», кто ищет путь к себе через тело, хочет научиться быть рядом со своими чувствами и строить более живые отношения с миром и людьми</p>
+                </div>
+
+                <div class="reveal-spacer reveal-spacer--intro"></div>
+            </div>
+        </section>
 
         <!-- ────────────────────────────────────────
              SECTION 1 — img 2 — Я практикующий психолог
@@ -375,6 +383,16 @@
         </footer>
 
     </main>
+
+    </div><!-- #scroll-root -->
+
+    <!-- ─── TOP TRIGGER — compact button shown when intro is dismissed ─── -->
+    <button id="top-trigger" class="top-trigger" aria-label="Вернуться наверх" title="Наверх">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+
 
     <script src="js/main.js"></script>
 </body>
