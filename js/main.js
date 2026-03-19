@@ -35,12 +35,33 @@
 
 'use strict';
 
-/* ─── CACHED VH ──────────────────────────────────────────────── */
-let cachedVH = window.innerHeight;
-window.addEventListener('resize', () => {
-    const h = window.innerHeight;
-    if (Math.abs(h - cachedVH) > 80) cachedVH = h;
-}, { passive: true });
+
+/* ─── STAGE METRICS (NEW SYSTEM) ────────────────────────────── */
+let stageH = 0;
+const metrics = {
+    revealPx: 0,
+    parkThreshold: 0,
+    introFadeEnd: 0,
+    introRestore: 0
+};
+
+function getStageHeight() {
+    const sticky = document.querySelector('.section-sticky-canvas');
+    if (sticky) return sticky.getBoundingClientRect().height;
+
+    const intro = document.getElementById('intro-overlay');
+    if (intro) return intro.getBoundingClientRect().height;
+
+    return window.innerHeight; // Fallback
+}
+
+function recalcMetrics() {
+    stageH = Math.max(getStageHeight(), 1);
+    metrics.revealPx = stageH * 0.80;
+    metrics.parkThreshold = stageH * 0.85;
+    metrics.introFadeEnd = stageH * 0.40;
+    metrics.introRestore = stageH * 0.02;
+}
 
 /* ─── IMAGE SOURCES ─────────────────────────────────────────── */
 const IMG = {
@@ -54,20 +75,20 @@ const IMG = {
 
 /* ─── DOM REFS ──────────────────────────────────────────────── */
 const introOverlay = document.getElementById('intro-overlay');
-const introHint    = introOverlay ? introOverlay.querySelector('.intro-scroll-hint') : null;
-const topTrigger   = document.getElementById('top-trigger');
-const sections     = Array.from(document.querySelectorAll('.page-section'));
+const introHint = introOverlay ? introOverlay.querySelector('.intro-scroll-hint') : null;
+const topTrigger = document.getElementById('top-trigger');
+const sections = Array.from(document.querySelectorAll('.page-section'));
 
 const canvasFront = document.getElementById('canvas-front');
-const canvasBack  = document.getElementById('canvas-back');
-const frontBlur   = document.getElementById('front-blur');
-const frontMain   = document.getElementById('front-main');
-const backBlur    = document.getElementById('back-blur');
-const backMain    = document.getElementById('back-main');
+const canvasBack = document.getElementById('canvas-back');
+const frontBlur = document.getElementById('front-blur');
+const frontMain = document.getElementById('front-main');
+const backBlur = document.getElementById('back-blur');
+const backMain = document.getElementById('back-main');
 
 /* ─── CANVAS STATE ──────────────────────────────────────────── */
 let loadedFront = 1;
-let loadedBack  = 2;
+let loadedBack = 2;
 
 function setFront(key) {
     if (loadedFront === key) return;
@@ -124,20 +145,20 @@ function parseImgKey(str) {
 
 function buildSectionsMeta() {
     sectionsMeta = sections.map(sec => ({
-        el:             sec,
-        img:            parseImgKey(sec.dataset.img),
-        nextImg:        parseImgKey(
-                            (sec.dataset.nextImg === 'none' || sec.dataset.nextImg === undefined)
-                                ? null
-                                : sec.dataset.nextImg
-                        ),
-        firstTB:        sec.querySelector('[data-first-textbox]'),
-        lastTB:         sec.querySelector('[data-last-textbox]'),
-        stickyEl:       sec.querySelector('.section-sticky-canvas'),
-        titleEl:        sec.querySelector('.section-title'),
-        inviteEl:       sec.querySelector('.scroll-invite'),
-        titleParked:    false,
-        inviteHidden:   false,
+        el: sec,
+        img: parseImgKey(sec.dataset.img),
+        nextImg: parseImgKey(
+            (sec.dataset.nextImg === 'none' || sec.dataset.nextImg === undefined)
+                ? null
+                : sec.dataset.nextImg
+        ),
+        firstTB: sec.querySelector('[data-first-textbox]'),
+        lastTB: sec.querySelector('[data-last-textbox]'),
+        stickyEl: sec.querySelector('.section-sticky-canvas'),
+        titleEl: sec.querySelector('.section-title'),
+        inviteEl: sec.querySelector('.scroll-invite'),
+        titleParked: false,
+        inviteHidden: false,
     }));
 }
 
@@ -171,11 +192,11 @@ function buildTransitionsMeta() {
     if (sectionsMeta.length > 0) {
         transitionsMeta.push({
             fromSection: null,
-            toSection:   sectionsMeta[0],
-            fromImg:     1,
-            toImg:       sectionsMeta[0].img,  // = 2 после обновления HTML
-            triggerEl:   null,
-            isIntro:     true,
+            toSection: sectionsMeta[0],
+            fromImg: 1,
+            toImg: sectionsMeta[0].img,  // = 2 после обновления HTML
+            triggerEl: null,
+            isIntro: true,
         });
     }
 
@@ -185,11 +206,11 @@ function buildTransitionsMeta() {
     for (let i = 0; i < sectionsMeta.length - 1; i++) {
         transitionsMeta.push({
             fromSection: sectionsMeta[i],
-            toSection:   sectionsMeta[i + 1],
-            fromImg:     sectionsMeta[i].img,
-            toImg:       sectionsMeta[i + 1].img,
-            triggerEl:   sectionsMeta[i].lastTB,
-            isIntro:     false,
+            toSection: sectionsMeta[i + 1],
+            fromImg: sectionsMeta[i].img,
+            toImg: sectionsMeta[i + 1].img,
+            triggerEl: sectionsMeta[i].lastTB,
+            isIntro: false,
         });
     }
 }
@@ -220,7 +241,7 @@ function sectionParallaxProgress(secMeta) {
     if (!secMeta || !secMeta.el) return 0;
     const r = secMeta.el.getBoundingClientRect();
     const scrolledIn = -r.top;
-    const maxScroll  = Math.max(1, secMeta.el.offsetHeight - cachedVH);
+    const maxScroll = Math.max(1, secMeta.el.offsetHeight - stageH);
     return Math.min(1, Math.max(0, scrolledIn / maxScroll));
 }
 
@@ -228,7 +249,7 @@ function sectionParallaxProgress(secMeta) {
 /*
  * При reveal-переходе:
  *   firstTB  входящей секции анимируется снизу (opacity + translateY).
- *   titleEl  входящей секции следует за split-line (top = (1-p)*cachedVH).
+ *   titleEl  входящей секции следует за split-line (top = (1-p)*stageH).
  *
  * firstTB:
  *   Диапазон revealProgress 0.7 → 1.0 → incomingTextProgress 0 → 1.
@@ -236,7 +257,7 @@ function sectionParallaxProgress(secMeta) {
  *   края viewport, захваченное один раз в начале анимации (incomingTextProgress > 0).
  *
  * titleEl:
- *   top = max(0, (1-revealProgress) * cachedVH) → ехать вверх вслед за split-line.
+ *   top = max(0, (1-revealProgress) * stageH) → ехать вверх вслед за split-line.
  *   При revealProgress=1 (top=0): force-park через .title-parked.
  *
  * Inline-стили firstTB очищаются через clearIncomingEntry().
@@ -246,17 +267,17 @@ function sectionParallaxProgress(secMeta) {
 function applyIncomingEntry(secMeta, progress, startShift) {
     if (!secMeta || !secMeta.firstTB) return;
     const shift = startShift !== undefined ? startShift : 0;
-    const ty    = ((1 - progress) * shift).toFixed(1);
-    secMeta.firstTB.style.opacity    = progress.toFixed(3);
-    secMeta.firstTB.style.transform  = 'translateY(' + ty + 'px)';
+    const ty = ((1 - progress) * shift).toFixed(1);
+    secMeta.firstTB.style.opacity = progress.toFixed(3);
+    secMeta.firstTB.style.transform = 'translateY(' + ty + 'px)';
     secMeta.firstTB.style.transition = 'none';
 }
 
 function clearIncomingEntry(secMeta) {
     // Очищает только firstTB; titleEl управляется title-split-follow.
     if (!secMeta || !secMeta.firstTB) return;
-    secMeta.firstTB.style.opacity    = '';
-    secMeta.firstTB.style.transform  = '';
+    secMeta.firstTB.style.opacity = '';
+    secMeta.firstTB.style.transform = '';
     secMeta.firstTB.style.transition = '';
 }
 
@@ -276,16 +297,20 @@ const TITLE_GAP_PX = 12;
 
 /**
  * Применяет следование за split-line.
- * top = max(0, (1-revealProgress)*cachedVH + TITLE_GAP_PX)
+ * top = max(0, (1-revealProgress)*stageH + TITLE_GAP_PX)
  * Без force-park — парковка всегда в updateTitle().
  */
 function applyTitleSplitFollow(secMeta, revealProgress) {
-    if (!secMeta || !secMeta.titleEl) return;
-    const splitTop = (1 - revealProgress) * cachedVH;
-    const tTop     = Math.max(0, splitTop + TITLE_GAP_PX);
-    const t        = secMeta.titleEl;
-    t.style.top        = tTop.toFixed(0) + 'px';
-    t.style.bottom     = 'auto';
+    if (!secMeta || !secMeta.titleEl || !secMeta.stickyEl) return;
+    // Используем высоту sticky-контейнера, а не stageH:
+    // title живёт внутри .section-sticky-canvas, поэтому
+    // позиция должна считаться в координатах этого контейнера.
+    const stickyH = secMeta.stickyEl.offsetHeight || stageH;
+    const splitTop = (1 - revealProgress) * stickyH;
+    const tTop = Math.max(0, splitTop + TITLE_GAP_PX);
+    const t = secMeta.titleEl;
+    t.style.top = tTop.toFixed(0) + 'px';
+    t.style.bottom = 'auto';
     t.style.transition = 'none';
 }
 
@@ -299,8 +324,8 @@ function clearTitleSplitFollow(secMeta) {
     if (secMeta.titleParked) {
         // CSS .title-parked взял управление — безопасно убрать inline стили
         const t = secMeta.titleEl;
-        t.style.top        = '';
-        t.style.bottom     = '';
+        t.style.top = '';
+        t.style.bottom = '';
         t.style.transition = '';
     }
     // Если не запаркован — оставляем inline `top` нетронутым до парковки
@@ -310,10 +335,8 @@ function clearTitleSplitFollow(secMeta) {
 /*
  * CSS управляет анимацией; JS только переключает .title-parked.
  * Парковка: firstTB.top <= 0 (textbox вышел за верх viewport).
- * Отпарковка: firstTB.top > PARK_THRESHOLD (гистерезис для скролла вверх).
+ * Отпарковка: firstTB.top > metrics.parkThreshold (гистерезис для скролла вверх).
  */
-const PARK_THRESHOLD = cachedVH * 0.85;
-
 function updateTitle(meta) {
     if (!meta.firstTB || !meta.stickyEl) return;
     const tbTop = meta.firstTB.getBoundingClientRect().top;
@@ -322,11 +345,11 @@ function updateTitle(meta) {
         meta.stickyEl.classList.add('title-parked');
         // Очистить inline top/bottom, оставшиеся от split-follow
         if (meta.titleEl) {
-            meta.titleEl.style.top        = '';
-            meta.titleEl.style.bottom     = '';
+            meta.titleEl.style.top = '';
+            meta.titleEl.style.bottom = '';
             meta.titleEl.style.transition = '';
         }
-    } else if (meta.titleParked && tbTop > PARK_THRESHOLD) {
+    } else if (meta.titleParked && tbTop > metrics.parkThreshold) {
         meta.titleParked = false;
         meta.stickyEl.classList.remove('title-parked');
     }
@@ -336,11 +359,11 @@ function updateTitle(meta) {
 function updateScrollInvite(meta) {
     if (!meta.inviteEl) return;
     const tbTop = meta.firstTB ? meta.firstTB.getBoundingClientRect().top : 999;
-    if (!meta.inviteHidden && tbTop < cachedVH * 0.5) {
+    if (!meta.inviteHidden && tbTop < stageH * 0.5) {
         meta.inviteHidden = true;
         meta.inviteEl.classList.add('is-hidden');
     }
-    if (meta.inviteHidden && tbTop > cachedVH * 0.9) {
+    if (meta.inviteHidden && tbTop > stageH * 0.9) {
         meta.inviteHidden = false;
         meta.inviteEl.classList.remove('is-hidden');
     }
@@ -356,8 +379,6 @@ function updateScrollInvite(meta) {
  * почти в самый верх (scrollY <= INTRO_RESTORE).
  */
 const INTRO_FADE_START = 0;
-const INTRO_FADE_END   = cachedVH * 0.4;
-const INTRO_RESTORE    = cachedVH * 0.02;
 
 let introDismissed = false;
 
@@ -366,7 +387,7 @@ function updateIntro() {
     const sy = window.scrollY;
 
     if (introDismissed) {
-        if (sy <= INTRO_RESTORE) {
+        if (sy <= metrics.introRestore) {
             introDismissed = false;
             introOverlay.style.opacity = '1';
             if (introHint) introHint.style.opacity = '0.7';
@@ -377,17 +398,19 @@ function updateIntro() {
     let opacity;
     if (sy <= INTRO_FADE_START) {
         opacity = 1;
-    } else if (sy >= INTRO_FADE_END) {
+    } else if (sy >= metrics.introFadeEnd) {
         opacity = 0;
         introDismissed = true;
     } else {
-        opacity = 1 - (sy - INTRO_FADE_START) / (INTRO_FADE_END - INTRO_FADE_START);
+        const range = (metrics.introFadeEnd - INTRO_FADE_START) || 1;
+        opacity = 1 - (sy - INTRO_FADE_START) / range;
     }
 
     introOverlay.style.opacity = opacity.toFixed(3);
 
     if (introHint) {
-        const hintFrac = Math.max(0, 1 - (sy - INTRO_FADE_START) / ((INTRO_FADE_END - INTRO_FADE_START) * 0.4));
+        const range = (metrics.introFadeEnd - INTRO_FADE_START) || 1;
+        const hintFrac = Math.max(0, 1 - (sy - INTRO_FADE_START) / (range * 0.4));
         introHint.style.opacity = (hintFrac * 0.7).toFixed(3);
     }
 
@@ -396,7 +419,7 @@ function updateIntro() {
 
 /* ─── ОСНОВНОЙ ФРЕЙМ ────────────────────────────────────────── */
 // Дистанция прокрутки, на которой разворачивается весь split-reveal
-const REVEAL_SCROLL_PX = cachedVH * 0.80;
+// const REVEAL_SCROLL_PX removed, using metrics.revealPx
 
 let ticking = false;
 
@@ -417,7 +440,7 @@ function onFrame() {
     // Если progress >= 1 → reveal завершён, activeImg = toImg, продолжаем.
     // После цикла: activeImg = картинка стабильной сцены.
 
-    let activeImg    = 1;          // начальное состояние — всегда img 1 (интро)
+    let activeImg = 1;          // начальное состояние — всегда img 1 (интро)
     let revealProgress = 0;
     let activeTransition = transitionsMeta.length > 0 ? transitionsMeta[0] : null;
 
@@ -426,25 +449,27 @@ function onFrame() {
 
         let progress;
         if (tr.isIntro) {
-            progress = Math.min(1, Math.max(0, window.scrollY / REVEAL_SCROLL_PX));
+            const range = metrics.revealPx || 1;
+            progress = Math.min(1, Math.max(0, window.scrollY / range));
         } else {
             if (!tr.triggerEl) continue;  // нет триггера → пропускаем
             const trigTop = tr.triggerEl.getBoundingClientRect().top;
-            progress = Math.min(1, Math.max(0, -trigTop / REVEAL_SCROLL_PX));
+            const range = metrics.revealPx || 1;
+            progress = Math.min(1, Math.max(0, -trigTop / range));
         }
 
         if (progress < 1) {
             // Этот transition активен прямо сейчас
             activeTransition = tr;
-            activeImg        = tr.fromImg;
-            revealProgress   = progress;
+            activeImg = tr.fromImg;
+            revealProgress = progress;
             break;
         }
 
         // Transition завершён — activeImg становится toImg
-        activeImg        = tr.toImg;
+        activeImg = tr.toImg;
         activeTransition = (i + 1 < transitionsMeta.length) ? transitionsMeta[i + 1] : null;
-        revealProgress   = 0;
+        revealProgress = 0;
         // Продолжаем: возможно следующий transition тоже завершён
     }
 
@@ -485,29 +510,33 @@ function onFrame() {
 
     // ── Incoming text handoff ──
     //
-    // firstTB: появляется снизу в диапазоне revealProgress 0.7→1.0.
-    //   Стартовый сдвиг = max(0, cachedVH - firstTB.top), снимается один раз
-    //   при первом ненулевом incomingTextProgress и кэшируется в transition._tbShift.
+    // isIntro: title первой секции едет за split-line.
+    //   firstTB НЕ анимируется через applyIncomingEntry —
+    //   он ведёт себя как обычный контентный блок.
     //
-    // titleEl: ехать за split-line с top=(1-revealProgress)*cachedVH.
-    //   Force-park при revealProgress=1.
+    // sec-transition: обычная incomingEntry для firstTB + title split-follow.
     let incomingSec = null;
     if (activeTransition && activeTransition.toSection) {
         incomingSec = activeTransition.toSection;
-        const itp = Math.min(1, Math.max(0, (revealProgress - 0.3) / 0.7));
 
-        // firstTB: кэшируем стартовый сдвиг при первом появлении
-        if (itp > 0 && activeTransition._tbShift === undefined) {
-            const tbTop = incomingSec.firstTB
-                ? incomingSec.firstTB.getBoundingClientRect().top
-                : cachedVH;
-            activeTransition._tbShift = Math.max(0, cachedVH - tbTop);
+        if (activeTransition.isIntro) {
+            // Интро: title едет за split-line, firstTB — без анимации
+            applyTitleSplitFollow(incomingSec, revealProgress);
+            // Сбрасываем любые inline-стили на firstTB, которые могли остаться
+            clearIncomingEntry(incomingSec);
+        } else {
+            // Обычный sec-transition: itp + title follow
+            const itp = Math.min(1, Math.max(0, (revealProgress - 0.3) / 0.7));
+            if (itp > 0 && activeTransition._tbShift === undefined) {
+                const tbTop = incomingSec.firstTB
+                    ? incomingSec.firstTB.getBoundingClientRect().top
+                    : stageH;
+                activeTransition._tbShift = Math.max(0, stageH - tbTop);
+            }
+            const shift = (itp > 0) ? (activeTransition._tbShift || 0) : 0;
+            applyIncomingEntry(incomingSec, itp, shift);
+            applyTitleSplitFollow(incomingSec, revealProgress);
         }
-        const shift = (itp > 0) ? (activeTransition._tbShift || 0) : 0;
-        applyIncomingEntry(incomingSec, itp, shift);
-
-        // titleEl: следует за split-line
-        applyTitleSplitFollow(incomingSec, revealProgress);
 
         // Очищаем стили остальных секций
         sectionsMeta.forEach(function (m) {
@@ -528,7 +557,7 @@ function onFrame() {
     // Пропускаем incomingSec пока идёт reveal (её title управляется split-follow).
     sectionsMeta.forEach(function (meta) {
         const r = meta.el.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > cachedVH * 1.5) return;
+        if (r.bottom < 0 || r.top > stageH * 1.5) return;
         if (meta === incomingSec) return;
         updateTitle(meta);
         updateScrollInvite(meta);
@@ -547,7 +576,7 @@ window.addEventListener('scroll', requestTick, { passive: true });
 /* ─── REVIEWS CAROUSEL ──────────────────────────────────────── */
 (function initReviews() {
     var track = document.getElementById('reviews-track');
-    var dots  = Array.from(document.querySelectorAll('.reviews-dots .dot'));
+    var dots = Array.from(document.querySelectorAll('.reviews-dots .dot'));
     if (!track) return;
 
     var total = track.querySelectorAll('.review-slide').length;
@@ -558,32 +587,32 @@ window.addEventListener('scroll', requestTick, { passive: true });
         current = Math.max(0, Math.min(total - 1, idx));
         var w = track.parentElement.offsetWidth;
         track.style.transition = animate ? '' : 'none';
-        track.style.transform  = 'translateX(' + (-current * w) + 'px)';
+        track.style.transform = 'translateX(' + (-current * w) + 'px)';
         dots.forEach(function (d, i) { d.classList.toggle('dot--active', i === current); });
     }
 
     function dragStart(x) { dragging = true; startX = x; dragDX = 0; track.classList.add('is-dragging'); }
-    function dragMove(x)  {
+    function dragMove(x) {
         if (!dragging) return;
         dragDX = x - startX;
         track.style.transition = 'none';
-        track.style.transform  = 'translateX(' + (-current * track.parentElement.offsetWidth + dragDX) + 'px)';
+        track.style.transform = 'translateX(' + (-current * track.parentElement.offsetWidth + dragDX) + 'px)';
     }
     function dragEnd() {
         if (!dragging) return;
         dragging = false;
         track.classList.remove('is-dragging');
-        if      (dragDX < -50) goTo(current + 1);
-        else if (dragDX >  50) goTo(current - 1);
-        else                   goTo(current);
+        if (dragDX < -50) goTo(current + 1);
+        else if (dragDX > 50) goTo(current - 1);
+        else goTo(current);
     }
 
-    track.addEventListener('touchstart', function (e) { dragStart(e.touches[0].clientX); },     { passive: true });
-    track.addEventListener('touchmove',  function (e) { dragMove(e.touches[0].clientX); },      { passive: true });
-    track.addEventListener('touchend',   function ()  { dragEnd(); },                           { passive: true });
-    track.addEventListener('mousedown',  function (e) { e.preventDefault(); dragStart(e.clientX); });
+    track.addEventListener('touchstart', function (e) { dragStart(e.touches[0].clientX); }, { passive: true });
+    track.addEventListener('touchmove', function (e) { dragMove(e.touches[0].clientX); }, { passive: true });
+    track.addEventListener('touchend', function () { dragEnd(); }, { passive: true });
+    track.addEventListener('mousedown', function (e) { e.preventDefault(); dragStart(e.clientX); });
     window.addEventListener('mousemove', function (e) { if (dragging) dragMove(e.clientX); });
-    window.addEventListener('mouseup',   function ()  { dragEnd(); });
+    window.addEventListener('mouseup', function () { dragEnd(); });
     dots.forEach(function (d) { d.addEventListener('click', function () { goTo(parseInt(d.dataset.slide, 10)); }); });
     goTo(0, false);
 })();
@@ -613,14 +642,15 @@ window.addEventListener('scroll', requestTick, { passive: true });
  * CSS-дефолт bottom не виден до onFrame.
  */
 document.addEventListener('DOMContentLoaded', function () {
+    recalcMetrics();
     buildSectionsMeta();
     buildTransitionsMeta();
 
     // Синхронно пре-позиционируем titles за нижний край viewport
     sectionsMeta.forEach(function (meta) {
         if (meta.titleEl) {
-            meta.titleEl.style.top        = (cachedVH + TITLE_GAP_PX) + 'px';
-            meta.titleEl.style.bottom     = 'auto';
+            meta.titleEl.style.top = (stageH + TITLE_GAP_PX) + 'px';
+            meta.titleEl.style.bottom = 'auto';
             meta.titleEl.style.transition = 'none';
         }
     });

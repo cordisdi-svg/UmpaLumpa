@@ -15,7 +15,8 @@
 
     --on-image-color: #F5EFE6;
     --on-image-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), 0 6px 30px rgba(0, 0, 0, 0.35);
-    --img-ratio: 0.6664; /* 853/1280 (portrait 2:3) */
+    --img-ratio: 0.6664;
+    /* 853/1280 (portrait 2:3) */
     --v-header-height: min(calc(100vw / var(--img-ratio)), 100svh);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
@@ -123,7 +124,7 @@ p+p {
     height: 110%;
     object-fit: cover;
     /* stretch to fill all gaps */
-    filter: blur(18px);
+    filter: blur(9px);
     opacity: 0.9;
     transform: none;
     will-change: transform;
@@ -159,6 +160,8 @@ p+p {
     pointer-events: none;
     will-change: opacity;
 }
+
+
 
 .intro-line {
     display: block;
@@ -339,7 +342,7 @@ p+p {
 
 /* Spacer after last textbox — gives scroll room for the reveal animation */
 .reveal-spacer {
-    height: 80vh;
+    height: calc(var(--v-header-height) * 0.8);
     pointer-events: none;
 }
 
@@ -358,7 +361,7 @@ p+p {
     line-height: 1.75;
     color: var(--text-dark);
     /* Gap between consecutive textboxes shows the image strip */
-    margin-bottom: 55vh;
+    margin-bottom: calc(var(--v-header-height) * 0.55);
 }
 
 /* Last textbox per section has no gap — reveal-spacer handles that */
