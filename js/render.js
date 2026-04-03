@@ -9,8 +9,8 @@ function renderIntroScene(data) {
 
   el.innerHTML = `
     <img src="${data.image}" loading="eager" fetchpriority="high" alt="">
+    <h2 class="scene__intro-title">${data.title}</h2>
     <div class="scene__intro-text">
-      <p class="scene__intro-title">${data.title}</p>
       <p class="scene__intro-body">${data.textBlocks && data.textBlocks.length > 0 ? data.textBlocks[0] : ''}</p>
     </div>
   `;

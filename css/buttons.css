@@ -1,0 +1,89 @@
+/* ============================================
+   SCENE__BUTTONS — обёртка для кнопок сцены 6
+   ============================================ */
+.scene__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg) var(--space-2xl);
+}
+
+/* ============================================
+   CONTACT-BTN — кнопка контакта/соцсети
+   
+   Структура:
+     <a class="contact-btn">
+       <span class="contact-btn__icon">[SVG]</span>
+       <span class="contact-btn__track">
+         <span class="contact-btn__label">Текст</span>
+       </span>
+     </a>
+   
+   В Фазе 3 GSAP будет анимировать:
+     .contact-btn__track → scaleX(0 → 1), transform-origin: left
+   ============================================ */
+.contact-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: color-mix(in srgb, var(--color-white) 90%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  transition:
+    background var(--transition-fast),
+    transform  var(--transition-fast);
+}
+
+.contact-btn:hover:not([aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--color-white) 100%, transparent);
+  transform: translateX(4px);
+}
+
+/* ============================================
+   CONTACT-BTN__ICON — круглая иконка слева
+   ============================================ */
+.contact-btn__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-white);
+}
+
+.contact-btn__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================
+   CONTACT-BTN__TRACK — полоса с подписью
+   overflow: hidden нужен для будущей GSAP-анимации scaleX
+   ============================================ */
+.contact-btn__track {
+  flex: 1;
+  overflow: hidden;
+  /* GSAP Phase 3: transform-origin: left; scaleX: 0 → 1 */
+}
+
+.contact-btn__label {
+  display: block;
+  white-space: nowrap;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ============================================
+   CONTACT-BTN--DISABLED
+   (дублирует scene.css для явности, один файл ответственен)
+   Основное правило — в scene.css
+   ============================================ */

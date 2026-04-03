@@ -19,19 +19,45 @@
   /* contain: убрано (Риск 1: ломает scrollHeight и sticky в Safari) */
 }
 
+/* Минимальная высота для визуального тестирования в Фазе 2.
+   В Фазе 3 GSAP переопределит через style.height = sceneHeights[i] + 'px'.
+   min-height не конфликтует с явным height. */
+.scene:not(.scene--intro) {
+  min-height: 100dvh;
+}
+
 /* ============================================
    SCENE — INTRO (сцена 1)
    ============================================ */
 .scene--intro {
   height: 100dvh;
-  overflow: hidden; /* допустимо ТОЛЬКО на intro — нет sticky внутри */
+  position: relative;
+  overflow: hidden; /* Допустимо: sticky-элементов здесь нет */
 }
 
 .scene--intro img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 60%;          /* верхние 60% занимает фото */
+  height: 100%;
   object-fit: cover;
   object-position: top center;
+  z-index: 0;
+}
+
+.scene__intro-title {
+  position: absolute;
+  top: 32px;
+  left: var(--space-lg);
+  right: var(--space-lg);
+  z-index: 2;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-white);
+  text-shadow: 0 2px 16px rgba(0,0,0,0.35);
+  margin: 0;
 }
 
 .scene__intro-text {
@@ -39,28 +65,22 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+  z-index: 1;
+  padding: 80px var(--space-lg) var(--space-2xl); /* Плавный переход градиента */
   background: linear-gradient(
     to bottom,
-    transparent,
-    color-mix(in srgb, var(--color-bg) 80%, transparent) 30%,
-    var(--color-bg) 70%
+    transparent 0%,
+    color-mix(in srgb, var(--color-bg) 60%, transparent) 40%,
+    var(--color-bg) 80%
   );
 }
 
-.scene__intro-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  margin-bottom: var(--space-md);
-  white-space: pre-line; /* поддержка \n в заголовке */
-}
-
 .scene__intro-body {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md); /* Больше для удобочитаемости */
   font-weight: var(--font-weight-light);
   color: var(--color-text-muted);
   line-height: var(--line-height-loose);
+  margin: 0;
 }
 
 /* ============================================
@@ -107,10 +127,10 @@
    ============================================ */
 .scene__title-layer {
   position: sticky;
-  top: 32px;
+  top: 0; /* Прилипает к верху экрана */
   z-index: 2;
-  padding: var(--space-md) var(--space-lg);
-  /* max-width для читаемости на широких экранах */
+  padding: 32px var(--space-lg) var(--space-md);
+  /* Теперь отступ до текста всегда 32px (и когда едет, и когда липнет) */
   max-width: 600px;
   /* ЗАПРЕЩЕНО: overflow: hidden (ломает sticky) */
 }
