@@ -1,0 +1,61 @@
+:root {
+  /* === Цвета === */
+  --color-bg:          #F5F0EA;   /* тёплый кремовый фон */
+  --color-surface:     #EDE7DF;   /* чуть темнее для блоков */
+  --color-text:        #2C2420;   /* тёмно-коричневый, не чёрный */
+  --color-text-muted:  #7A6A62;   /* приглушённый */
+  --color-accent:      #A0634A;   /* терракот */
+  --color-accent-soft: #C9956F;   /* светлый терракот */
+  --color-white:       #FFFCF8;   /* тёплый белый */
+
+  /* === Типографика === */
+  --font-family:   'Inter', system-ui, sans-serif;
+  --font-size-xs:  0.75rem;    /* 12px */
+  --font-size-sm:  0.875rem;   /* 14px */
+  --font-size-base: 1rem;      /* 16px */
+  --font-size-md:  1.125rem;   /* 18px */
+  --font-size-lg:  1.375rem;   /* 22px */
+  --font-size-xl:  1.75rem;    /* 28px */
+  --font-size-2xl: 2.25rem;    /* 36px */
+  --font-weight-light:   300;
+  --font-weight-regular: 400;
+  --font-weight-medium:  500;
+  --font-weight-semibold: 600;
+  --line-height-tight:  1.2;
+  --line-height-normal: 1.6;
+  --line-height-loose:  1.8;
+
+  /* === Отступы === */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  40px;
+  --space-2xl: 64px;
+
+  /* === Радиусы === */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+
+  /* === Переходы === */
+  --transition-fast:   150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow:   500ms ease;
+
+  /* === Z-index базовые уровни === */
+  /* Сцены используют calc(var(--scene-index) * 100) */
+  --z-sticky:  10;
+  --z-overlay: 1000;
+}
+
+/* Базовые стили тела */
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  line-height: var(--line-height-normal);
+}
