@@ -168,3 +168,14 @@
   min-height: 200px;
   margin-top: var(--space-md);
 }
+
+/* ============================================
+   CONTACT-BTN--DISABLED
+   aria-disabled="true" + pointer-events: none
+   (disabled аттрибут не работает на <a>)
+   ============================================ */
+.contact-btn--disabled {
+  pointer-events: none;
+  opacity: 0.45;
+  cursor: default;
+}

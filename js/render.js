@@ -1,4 +1,3 @@
-import { SCENES } from './config.js';
 import { getIconSvg } from './icons.js';
 
 export const sceneElements = new Map();
@@ -39,7 +38,7 @@ function renderScene(data, config, index, content) {
       return `
         <a class="contact-btn ${isDisabled ? 'contact-btn--disabled' : ''}" 
            href="${isDisabled ? '#' : btn.href}" 
-           ${isDisabled ? 'disabled' : 'target="_blank" rel="noopener noreferrer"'}
+           ${isDisabled ? 'aria-disabled="true"' : 'target="_blank" rel="noopener noreferrer"'}
            id="contact-btn-${btn.icon}-${i}">
           <span class="contact-btn__icon">${getIconSvg(btn.icon)}</span>
           <span class="contact-btn__track">
@@ -119,7 +118,7 @@ export function buildSceneElementsMap() {
     sceneElements.set(id, {
       scene:      el,
       mask:       el.querySelector('.scene__mask') || null,
-      image:      el.querySelector('.scene__image-layer img, .scene--intro img') || null,
+      image:      el.querySelector('.scene__image-layer img') || el.querySelector('img') || null,
       textBlocks: el.querySelectorAll('.scene__text-block')
     });
   });

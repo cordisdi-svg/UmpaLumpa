@@ -1,4 +1,4 @@
-import { SCENES, MAX_TEXT_LINES } from './config.js';
+import { MAX_TEXT_LINES } from './config.js';
 
 export async function fetchContent() {
   const res = await fetch('/content.json');
