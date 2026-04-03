@@ -19,9 +19,10 @@ SCENES = [
 ```
 
 > ⚠️ ВАЖНО: Сцена 5 имеет `textBlocks: 1` (цены) + `hasCarousel: true` (карусель отзывов).
-> Карусель рендерится ПОСЛЕ текстблока внутри сцены 5, но является отдельным независимым компонентом
-> (горизонтальный свайп, без вертикального скролла, без GSAP-анимации).
-> Карусель не входит в timeline сцены 5 — она монтируется статично в `.scene__carousel-slot`.
+> Карусель (`scene__carousel-slot`) рендерится как **последний дочерний элемент `.scene__text-layer`** (Вариант Б).
+> Это гарантирует, что `scrollHeight` текстового слоя автоматически включает высоту карусели —
+> формула `getSceneHeight` остаётся универсальной без ветвления по `sceneConfig`.
+> Карусель не входит в GSAP-timeline (селектор `.scene__text-block` её не захватывает).
 
 ---
 
@@ -90,7 +91,8 @@ SCENES = [
 - [ ] `js/render.js` — `renderScenes(content, SCENES)`:
   - Сцена 1 (isIntro) — специальная разметка (см. план §8)
   - Сцены 2–6 — стандартная разметка (см. план §6)
-  - Сцена 5 — добавить `.scene__carousel-slot` после `.scene__text-layer`
+  - Сцена 5 — добавить `.scene__carousel-slot` как **последний дочерний элемент `.scene__text-layer`** (НЕ после него, а внутри!)
+    → Это позволяет `scrollHeight` слоя автоматически учесть высоту карусели без изменения `getSceneHeight`
   - Сцена 6 — добавить кнопки контактов (`.contact-btn` × N) из `content.buttons`
   - `buildSceneElementsMap()` — кэш DOM-элементов в `Map`
   - Установка `--scene-index` через `sceneEl.style.setProperty('--scene-index', i + 1)`
@@ -175,6 +177,8 @@ SCENES = [
   textHeight = sceneEl.querySelector('.scene__text-layer')?.scrollHeight || 0
   ```
   > ⚠️ `getSceneHeight` вызывается только ПОСЛЕ `document.fonts.ready`
+  > ✔ Для сцены 5: `.scene__carousel-slot` находится **внутри** `.scene__text-layer`,
+  > поэтому `scrollHeight` автоматически включает высоту карусели — формула универсальна.
 
 - [ ] `recalcSceneHeights()` — пересчёт `sceneHeights[]` массива
 
@@ -427,4 +431,5 @@ const SCENES = [
 
 ---
 
-*Версия мастер-плана: 1.0 | Дата: 2026-04-03 | Основан на: scene-engine-plan-v4.1*
+*Версия мастер-плана: 1.1 | Дата: 2026-04-03 | Основан на: scene-engine-plan-v4.1*
+*Изменения v1.1: Вариант Б для карусели сцены 5 (carousel-slot внутри text-layer)*
