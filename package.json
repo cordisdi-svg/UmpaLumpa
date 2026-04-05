@@ -1,0 +1,12 @@
+{
+  "name": "jekkijaneart",
+  "version": "1.0.0",
+  "description": "Portfolio website for JekkiJaneArt",
+  "scripts": {
+    "dev": "npx -y serve . --listen 3000",
+    "start": "npx -y serve . --listen 3000"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}

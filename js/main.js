@@ -20,12 +20,27 @@
  * 15. ScrollTrigger.refresh()
  */
 
-import { CRITICAL_FONT } from './config.js';
+import { SCENES, CRITICAL_FONT } from './config.js';
+import { fetchContent, validateContent } from './content.js';
+import { renderScenes, renderFaq, buildSceneElementsMap } from './render.js';
+import { initImageLoading } from './images.js';
 
 async function main() {
-  console.log('[main] Scene Engine v4.3 — Фаза 0: scaffolding OK');
-  console.log('[main] CRITICAL_FONT:', CRITICAL_FONT);
-  // Полный lifecycle будет добавлен по мере фаз разработки.
+  console.log('[main] Scene Engine v4.3 — Фаза 0/1');
+  
+  // 1-2. Контент
+  const content = await fetchContent();
+  validateContent(content, SCENES);
+  
+  // 3-5. Рендер DOM и кэш
+  renderScenes(content, SCENES);
+  renderFaq(content.faq);
+  const sceneElements = buildSceneElementsMap();
+  
+  // 6. Ленивая загрузка
+  initImageLoading();
+
+  console.log('[main] Фаза 1: контент загружен и отрендерен');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
