@@ -1,39 +1,33 @@
-import { gsap }              from 'gsap';
-import { ScrollTrigger }     from 'gsap/ScrollTrigger';
-import { SCENES }            from './config.js';
-import { fetchContent, validateContent } from './content.js';
-import { renderScenes, buildSceneElementsMap } from './render.js';
-import { initImageLoading }    from './images.js';
+/**
+ * main.js — точка входа, lifecycle
+ * Фаза 0: заглушка. Полный lifecycle появится в Фазе 8.
+ *
+ * Lifecycle (порядок строгий, по MASTER-PLAN v4.3):
+ * 1.  fetchContent()
+ * 2.  validateContent(content, SCENES)
+ * 3.  renderScenes(content, SCENES)
+ * 4.  renderFaq(content.faq)
+ * 5.  buildSceneElementsMap()
+ * 6.  initImageLoading()
+ * 7.  await document.fonts.load(`1em ${CRITICAL_FONT}`).catch(() => {})
+ * 8.  recalcSceneHeights()
+ * 9.  scene.style.height = sceneHeights[i]
+ * 10. gsap.set(".scene__mask", ...)
+ * 11. if (prefersReducedMotion) { static } else { initScenes() }
+ * 12. initCarousel(content.carousel.slides)
+ * 13. initFaq(content.faq)
+ * 14. initResizeHandler()
+ * 15. ScrollTrigger.refresh()
+ */
 
-// --- GSAP регистрация — здесь, не в config.js ---
-// gsap ещё не используется в этой фазе, но регистрацию лучше сделать заранее
-gsap.registerPlugin(ScrollTrigger);
+import { CRITICAL_FONT } from './config.js';
 
 async function main() {
-  try {
-    // 1. Загрузка контента
-    const content = await fetchContent();
-
-    // 2. Валидация
-    validateContent(content, SCENES);
-
-    // 3. Рендер DOM
-    renderScenes(content, SCENES);
-
-    // 4. Кэширование DOM-элементов
-    buildSceneElementsMap();
-
-    // 5. Настройка lazy-загрузки изображений
-    initImageLoading();
-
-    // 6. Ждём шрифтов (КРИТИЧНО: до расчёта высот)
-    await document.fonts.ready;
-
-    // Фазы 3–6 (engine, carousel, faq, resize) — здесь поставим плейсхолдер
-    console.log('Фаза 1 завершена успешно');
-  } catch (err) {
-    console.error('Ошибка инициализации:', err);
-  }
+  console.log('[main] Scene Engine v4.3 — Фаза 0: scaffolding OK');
+  console.log('[main] CRITICAL_FONT:', CRITICAL_FONT);
+  // Полный lifecycle будет добавлен по мере фаз разработки.
 }
 
-main();
+document.addEventListener('DOMContentLoaded', () => {
+  main().catch(err => console.error('[main] Критическая ошибка:', err));
+});

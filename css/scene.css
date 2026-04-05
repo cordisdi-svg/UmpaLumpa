@@ -1,63 +1,134 @@
-/* ============================================
-   PAGE — корневой контейнер
-   ============================================ */
-.page {
-  position: relative;
-  /* touch-action: pan-y устанавливается в Фазе 4 (карусель) */
-}
+/* ─── scene.css — стили сцен ─────────────────────────────────────────────────
+   Фаза 0: layout-критичные правила (sticky-механика).
+   Фаза 2: дополняется типографикой, текстовыми блоками, интро-сценой.
 
-/* ============================================
-   SCENE — базовый контейнер сцены
-   ============================================
-   ЗАПРЕЩЕНО: transform, overflow: hidden,
-   filter, clip-path (ломают sticky на iOS)
-   ============================================ */
+   ⚠️ КРИТИЧЕСКИЕ ЗАПРЕТЫ на .scene, body, html:
+      transform | filter | overflow: hidden | clip-path | contain: layout style
+      → создают stacking context / убивают position: sticky (особенно Safari)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Контейнер сцены ────────────────────────────────────────────────────── */
 .scene {
   position: relative;
-  /* z-index вычисляется через --scene-index, задаётся в JS */
+  /* height выставляется явно через JS после recalcSceneHeights() */
+  /* НЕТ: transform, filter, overflow, clip-path, contain */
   z-index: calc(var(--scene-index, 1) * 100);
-  /* contain: убрано (Риск 1: ломает scrollHeight и sticky в Safari) */
 }
 
-/* Минимальная высота для визуального тестирования в Фазе 2.
-   В Фазе 3 GSAP переопределит через style.height = sceneHeights[i] + 'px'.
-   min-height не конфликтует с явным height. */
-.scene:not(.scene--intro) {
-  min-height: 100dvh;
+/* ─── Перекрытие сцен ────────────────────────────────────────────────────── */
+/* Каждая сцена (кроме первой) физически наезжает на предыдущую.
+   .scene ~ .scene не затрагивает первую сцену — она стоит без перекрытия. */
+.scene ~ .scene {
+  margin-top: -100dvh;
 }
 
-/* ============================================
-   SCENE — INTRO (сцена 1)
-   ============================================ */
-.scene--intro {
-  height: 100dvh;
-  position: relative;
-  overflow: hidden; /* Допустимо: sticky-элементов здесь нет */
-}
-
-.scene--intro img {
-  position: absolute;
+/* ─── Маска (sticky-контейнер для картинки) ──────────────────────────────── */
+/* [FIX v4.3] position: sticky — маска залипает на viewport.
+   overflow: hidden — обязателен: img (absolute, inset: 0) не вылезает
+   за пределы 100dvh-контейнера при высоте .scene 3000px+.
+   ⚠️ Safari: sticky ломается если любой ancestor имеет overflow: hidden/auto.
+   Убедиться что на .scene, body, html — нет overflow: hidden. */
+.scene__mask {
+  position: sticky;
   top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  height: 100dvh;
+  overflow: hidden;
+  clip-path: inset(100% 0 0 0); /* начальное состояние — маска закрыта */
   z-index: 0;
 }
 
-.scene__intro-title {
+/* ─── Картинка ───────────────────────────────────────────────────────────── */
+/* [FIX v4.3] object-fit: cover + inset: 0.
+   Не использовать transform: translateY(-50%) — растягивает вертикальные
+   изображения на широких экранах. */
+.scene__mask img {
   position: absolute;
-  top: 32px;
-  left: var(--space-lg);
-  right: var(--space-lg);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* ─── Sticky заголовок ───────────────────────────────────────────────────── */
+/* position: sticky даёт нужный эффект без GSAP-анимации:
+   заголовок синхронизируется с раскрытием clip-path автоматически.
+   Нет overflow: hidden — sticky работает только вне clip-path контекста. */
+.scene__title-layer {
+  position: sticky;
+  top: var(--space-8);  /* 32px */
   z-index: 2;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  color: var(--color-white);
-  text-shadow: 0 2px 16px rgba(0,0,0,0.35);
-  margin: 0;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+  pointer-events: none; /* не перехватывает клики от кнопок ниже */
+}
+
+.scene__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-title-text);
+}
+
+/* ─── Текстовый слой ─────────────────────────────────────────────────────── */
+/* scrollHeight этого элемента используется в getSceneHeight().
+   Для сцены 5: .scene__carousel-slot внутри этого слоя —
+   scrollHeight автоматически включает высоту карусели. */
+.scene__text-layer {
+  position: relative;
+  z-index: 2;
+  padding-top: calc(var(--title-height, 60px) + var(--space-16));
+}
+
+/* ─── Текстовый блок (плашка) ────────────────────────────────────────────── */
+.scene__text-block {
+  background: var(--color-text-block-bg);
+  border: 1px solid var(--color-text-block-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  margin: 0 var(--space-6) var(--space-6);
+
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-body-on-dark);
+
+  /* Начальная позиция для GSAP — смещён вниз */
+  transform: translateY(100vh);
+  /* ⚠️ opacity НЕ используется для анимации через scrub — мигает */
+}
+
+/* ─── Интро-сцена (Сцена 1) ──────────────────────────────────────────────── */
+/* Полностью статичная. Никаких sticky/clip-path/GSAP-механик. */
+.scene--intro {
+  position: relative;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  /* НЕ получает margin-top: -100dvh — стоит первой в потоке */
+  /* z-index: 100 (через --scene-index: 1) */
+}
+
+.scene__intro-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.scene__intro-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.scene__intro-title {
+  position: relative;
+  z-index: 1;
+  padding: var(--space-8) var(--space-6) 0;
 }
 
 .scene__intro-text {
@@ -66,136 +137,10 @@
   left: 0;
   right: 0;
   z-index: 1;
-  padding: 80px var(--space-lg) var(--space-2xl); /* Плавный переход градиента */
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    color-mix(in srgb, var(--color-bg) 60%, transparent) 40%,
-    var(--color-bg) 80%
-  );
+  padding: var(--space-6);
 }
 
-.scene__intro-body {
-  font-size: var(--font-size-md); /* Больше для удобочитаемости */
-  font-weight: var(--font-weight-light);
-  color: var(--color-text-muted);
-  line-height: var(--line-height-loose);
-  margin: 0;
-}
-
-/* ============================================
-   SCENE__MASK — слой с clip-path анимацией
-   ============================================
-   clip-path ставится через gsap.set() в JS,
-   не через CSS (кроме начального состояния
-   которое тоже через gsap.set)
-   ============================================ */
-.scene__mask {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  /* Начальное состояние (закрыто) выставляется через gsap.set() в main() */
-}
-
-/* ============================================
-   SCENE__IMAGE-LAYER — фоновое изображение
-   ============================================
-   Изображение НИКОГДА не двигается.
-   Эффект появления создаётся clip-path маски.
-   ============================================ */
-.scene__image-layer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-.scene__image-layer img {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: translateY(-50%);
-}
-
-/* ============================================
-   SCENE__TITLE-LAYER — sticky заголовок
-   ============================================
-   Находится ВНЕ .scene__mask (sibling).
-   clip-path на маске не влияет на sticky.
-   ============================================ */
-.scene__title-layer {
-  position: sticky;
-  top: 0; /* Прилипает к верху экрана */
-  z-index: 2;
-  padding: 32px var(--space-lg) var(--space-md);
-  /* Теперь отступ до текста всегда 32px (и когда едет, и когда липнет) */
-  max-width: 600px;
-  /* ЗАПРЕЩЕНО: overflow: hidden (ломает sticky) */
-}
-
-.scene__title-layer h2 {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  color: var(--color-white);
-  white-space: pre-line;
-  /* Текстовая тень для читаемости поверх изображения */
-  text-shadow: 0 2px 16px rgba(0,0,0,0.35);
-}
-
-/* ============================================
-   SCENE__TEXT-LAYER — контейнер текстблоков
-   ============================================
-   pt = высота заголовка + зазор.
-   --title-height пересчитывается в JS при resize.
-   ============================================ */
-.scene__text-layer {
-  position: relative;
-  z-index: 2;
-  padding-top: calc(var(--title-height, 80px) + var(--space-2xl));
-  padding-bottom: var(--space-2xl);
-}
-
-/* ============================================
-   SCENE__TEXT-BLOCK — отдельный текстовый блок
-   ============================================
-   Начальная позиция (y = BASE_VH) ставится
-   через gsap.set() / fromTo() в engine.js.
-   ЗАПРЕЩЕНО: opacity transitions (только translateY)
-   ============================================ */
-.scene__text-block {
-  padding: var(--space-lg);
-  margin-bottom: var(--space-md);
-  background: color-mix(in srgb, var(--color-white) 88%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-md);
-  line-height: var(--line-height-loose);
-  color: var(--color-text);
-  white-space: pre-line; /* поддержка \n в textBlocks */
-}
-
-/* ============================================
-   SCENE__CAROUSEL-SLOT — слот карусели
-   (внутри .scene__text-layer, последний элемент)
-   Стили карусели — в carousel.css (Фаза 4)
-   ============================================ */
-.scene__carousel-slot {
-  /* Заглушка — стили появятся в Фазе 4 */
-  min-height: 200px;
-  margin-top: var(--space-md);
-}
-
-/* ============================================
-   CONTACT-BTN--DISABLED
-   aria-disabled="true" + pointer-events: none
-   (disabled аттрибут не работает на <a>)
-   ============================================ */
-.contact-btn--disabled {
-  pointer-events: none;
-  opacity: 0.45;
-  cursor: default;
+/* Текстовый блок в интро — без GSAP-смещения */
+.scene--intro .scene__text-block {
+  transform: none;
 }

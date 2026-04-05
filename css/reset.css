@@ -1,32 +1,72 @@
-*, *::before, *::after {
+/* ─── Modern CSS Reset ───────────────────────────────────────────────────────
+   ⚠️ Запрещено добавлять overflow: hidden на *, html, body —
+   убивает position: sticky на .scene__mask и .scene__title-layer (особенно Safari).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
 html {
+  /* Плавный скролл только по запросу пользователя — не переопределяем */
+  scroll-behavior: auto;
+  /* НЕТ overflow: hidden — убьёт sticky */
   -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
 }
 
 body {
   min-height: 100dvh;
   line-height: 1.5;
+  /* НЕТ overflow: hidden — убьёт sticky */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-img, video {
+/* Изображения масштабируются корректно */
+img,
+picture,
+video,
+canvas,
+svg {
   display: block;
   max-width: 100%;
 }
 
-button, input, select, textarea {
+/* Типографика не наследует по умолчанию */
+input,
+button,
+textarea,
+select {
   font: inherit;
 }
 
-/* Убираем декорации у ссылок-кнопок */
+/* Заголовки не имеют лишних margin */
+h1, h2, h3, h4, h5, h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Ссылки без подчёркивания по умолчанию */
 a {
   text-decoration: none;
   color: inherit;
+}
+
+/* Списки без маркеров */
+ul, ol {
+  list-style: none;
+}
+
+/* Текстовые блоки переносятся корректно */
+p, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+}
+
+/* Скрытые элементы через hidden */
+[hidden] {
+  display: none !important;
 }

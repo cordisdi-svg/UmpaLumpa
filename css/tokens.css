@@ -1,61 +1,99 @@
+/* ─── Tokens — CSS переменные ────────────────────────────────────────────────
+   Источник истины для всей дизайн-системы.
+   Изменять только здесь — не в компонентах.
+   ─────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  /* === Цвета === */
-  --color-bg:          #F5F0EA;   /* тёплый кремовый фон */
-  --color-surface:     #EDE7DF;   /* чуть темнее для блоков */
-  --color-text:        #2C2420;   /* тёмно-коричневый, не чёрный */
-  --color-text-muted:  #7A6A62;   /* приглушённый */
-  --color-accent:      #A0634A;   /* терракот */
-  --color-accent-soft: #C9956F;   /* светлый терракот */
-  --color-white:       #FFFCF8;   /* тёплый белый */
 
-  /* === Типографика === */
-  --font-family:   'Inter', system-ui, sans-serif;
-  --font-size-xs:  0.75rem;    /* 12px */
-  --font-size-sm:  0.875rem;   /* 14px */
-  --font-size-base: 1rem;      /* 16px */
-  --font-size-md:  1.125rem;   /* 18px */
-  --font-size-lg:  1.375rem;   /* 22px */
-  --font-size-xl:  1.75rem;    /* 28px */
-  --font-size-2xl: 2.25rem;    /* 36px */
-  --font-weight-light:   300;
-  --font-weight-regular: 400;
-  --font-weight-medium:  500;
-  --font-weight-semibold: 600;
-  --line-height-tight:  1.2;
-  --line-height-normal: 1.6;
-  --line-height-loose:  1.8;
+  /* ── Шрифты ──────────────────────────────────────────────────────────────── */
+  --font-heading: 'Raleway', sans-serif;
+  --font-body:    'Inter', sans-serif;
 
-  /* === Отступы === */
-  --space-xs:  4px;
-  --space-sm:  8px;
-  --space-md:  16px;
-  --space-lg:  24px;
-  --space-xl:  40px;
-  --space-2xl: 64px;
+  /* ── Палитра — тёплые нейтральные тона ──────────────────────────────────── */
 
-  /* === Радиусы === */
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
+  /* Фоны */
+  --color-bg:           #F7F2EA;   /* кремовый, основной фон body (FAQ и т.д.) */
+  --color-surface:      #EDE6D9;   /* чуть темнее кремового */
+
+  /* Текст */
+  --color-text-primary: #1C1A17;   /* почти чёрный, warm-charcoal */
+  --color-text-muted:   #6B6055;   /* тёплый серо-коричневый */
+
+  /* Акцент */
+  --color-accent:       #A0685A;   /* терракота — кнопки, ссылки, декор */
+  --color-accent-light: #C08878;   /* светлее для hover */
+
+  /* Текстовые блоки поверх фото — тёмная плашка */
+  --color-text-block-bg:     rgba(20, 18, 15, 0.80);
+  --color-text-block-border: rgba(255, 255, 255, 0.08);
+
+  /* Заголовки поверх фото */
+  --color-title-text:   #F5F0E8;   /* кремовый на тёмном фоне */
+  --color-body-on-dark: #E8DDD0;   /* чуть тёплый белый для текста на тёмном */
+
+  /* Разделители */
+  --color-divider:      rgba(28, 26, 23, 0.12);
+
+  /* ── Типографика ────────────────────────────────────────────────────────── */
+
+  /* Размеры */
+  --text-xs:   0.75rem;    /* 12px */
+  --text-sm:   0.875rem;   /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-md:   1.125rem;   /* 18px */
+  --text-lg:   1.25rem;    /* 20px */
+  --text-xl:   1.5rem;     /* 24px */
+  --text-2xl:  1.875rem;   /* 30px */
+  --text-3xl:  2.25rem;    /* 36px */
+
+  /* Межстрочный интервал */
+  --leading-tight:  1.2;
+  --leading-snug:   1.35;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  /* Letter spacing */
+  --tracking-tight:  -0.02em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.04em;
+  --tracking-wider:   0.08em;
+
+  /* ── Отступы ────────────────────────────────────────────────────────────── */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+
+  /* ── Скругления ─────────────────────────────────────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
   --radius-full: 9999px;
 
-  /* === Переходы === */
+  /* ── Переходы ───────────────────────────────────────────────────────────── */
   --transition-fast:   150ms ease;
-  --transition-normal: 300ms ease;
-  --transition-slow:   500ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   400ms ease;
 
-  /* === Z-index базовые уровни === */
-  /* Сцены используют calc(var(--scene-index) * 100) */
-  --z-sticky:  10;
-  --z-overlay: 1000;
+  /* ── Z-index шкала ──────────────────────────────────────────────────────── */
+  --z-scene-base: 100;   /* шаг для сцен: сцена N = N * 100 */
+  --z-faq:        9000;  /* FAQ поверх всего */
+  --z-overlay:    9999;  /* аварийный оверлей */
 }
 
-/* Базовые стили тела */
+/* ── Базовые стили body ──────────────────────────────────────────────────── */
 body {
-  font-family: var(--font-family);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-regular);
-  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
   background-color: var(--color-bg);
-  line-height: var(--line-height-normal);
+  line-height: var(--leading-normal);
 }

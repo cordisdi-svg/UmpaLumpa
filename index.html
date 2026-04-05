@@ -1,30 +1,58 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Анастасия Швейкина — телесно-ориентированный психолог</title>
-  <meta name="description" content="Психолог, работающий в телесно-ориентированном подходе. Помогаю найти путь к себе через тело, дыхание и осознанность.">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Google Fonts: Inter (основной шрифт) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- SEO -->
+  <title>Анастасия Швейкина — телесно-ориентированный психолог</title>
+  <meta name="description" content="Телесно-ориентированная психология. Работаю с тревогой, напряжением, выгоранием и трудностями в отношениях через дыхание, движение и осознанность. Онлайн и очно." />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Анастасия Швейкина — телесно-ориентированный психолог" />
+  <meta property="og:description" content="Телесно-ориентированная психология. Помогаю вернуться к себе через тело, дыхание и осознанность." />
+  <meta property="og:image" content="/1.webp" />
+
+  <!-- Google Fonts: Raleway (заголовки) + Inter (текст) -->
+  <!-- display=block: нет layout shift после document.fonts.load() -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Raleway:wght@400;600;700&display=block"
+    rel="stylesheet"
+  />
 
   <!-- CSS -->
-  <link rel="stylesheet" href="css/reset.css">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/scene.css">
-  <link rel="stylesheet" href="css/buttons.css">
+  <link rel="stylesheet" href="css/reset.css" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/scene.css" />
+  <link rel="stylesheet" href="css/carousel.css" />
+  <link rel="stylesheet" href="css/faq.css" />
+  <link rel="stylesheet" href="css/buttons.css" />
+
+  <!-- GSAP + ScrollTrigger via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+
+  <!-- App JS (ES modules) -->
+  <script type="module" src="js/main.js" defer></script>
 </head>
 <body>
 
-  <!-- Контейнер страницы — сцены рендерятся сюда через JS -->
-  <div id="page" class="page"></div>
+  <!-- Контейнер сцен 1–6 -->
+  <main id="scenes-container">
+    <!-- renderScenes() монтирует сюда -->
+  </main>
 
+  <!-- FAQ — отдельная секция, вне сцен и вне зоны ScrollTrigger -->
+  <section id="faq">
+    <!-- renderFaq() монтирует сюда -->
+  </section>
 
+  <!-- Аварийный оверлей (скрыт по умолчанию) -->
+  <div id="fatal-error" hidden aria-live="assertive"></div>
 
-  <!-- Точка входа -->
-  <script src="js/main.js" type="module"></script>
 </body>
 </html>
