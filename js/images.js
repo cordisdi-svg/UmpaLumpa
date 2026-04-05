@@ -14,6 +14,17 @@ export function initImageLoading() {
   
   if (!lazyImgs.length) return;
 
+  // Guard: IntersectionObserver не поддерживается в ~2% браузеров
+  if (!('IntersectionObserver' in window)) {
+    // Fallback: загружаем все изображения сразу без lazy-loading
+    lazyImgs.forEach(img => {
+      img.src = img.dataset.src;
+      img.decoding = 'async';
+      delete img.dataset.src; // убираем data-src — единственный источник правды
+    });
+    return;
+  }
+
   const observer = new IntersectionObserver((entries, obs) => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
@@ -21,6 +32,7 @@ export function initImageLoading() {
       const img = entry.target;
       img.src = img.dataset.src;
       img.decoding = 'async';
+      delete img.dataset.src; // убираем data-src после загрузки
       obs.unobserve(img);
     });
   }, {

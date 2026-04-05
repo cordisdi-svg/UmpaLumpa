@@ -14,14 +14,17 @@
 html {
   /* Плавный скролл только по запросу пользователя — не переопределяем */
   scroll-behavior: auto;
-  /* НЕТ overflow: hidden — убьёт sticky */
+  overflow-y: auto; /* КРИТИЧНО: explicit — защита от случайного hidden, Safari требует */
+  /* overflow-x: hidden НЕ ставим: iOS 15–16 + sticky → ломает repaint. */
+  /* Горизонтальный overscroll закрыт через overscroll-behavior-x на body. */
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-height: 100dvh;
   line-height: 1.5;
-  /* НЕТ overflow: hidden — убьёт sticky */
+  overflow-y: auto;            /* КРИТИЧНО: explicit — Safari требует явного значения */
+  overscroll-behavior-x: none; /* скрываем горизонтальный overscroll без overflow-x: hidden */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

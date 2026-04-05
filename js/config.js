@@ -60,7 +60,7 @@ export const CRITICAL_FONT = 'Inter';
  * ⚠️ После изменения массива — обновить content.json и перезапустить сайт.
  */
 export const SCENES = [
-  { id: 1, textBlocks: 0, isIntro: true },            // 1.webp — статичная интро
+  { id: 1, textBlocks: 1, isIntro: true },            // 1.webp — статичная интро
   { id: 2, textBlocks: 2 },                            // 2.webp — запросы клиентов
   { id: 3, textBlocks: 1 },                            // 3.webp — подход
   { id: 4, textBlocks: 2 },                            // 4.webp — как работают сессии

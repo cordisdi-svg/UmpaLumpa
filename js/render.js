@@ -8,6 +8,10 @@ const resolveAsset = (path) => path.startsWith('/') ? `${ASSETS_PATH}${path}` : 
  * Рендерит все сцены в контейнер.
  * @param {Object} content Контент из JSON
  * @param {Array} SCENES Конфигурация
+ *
+ * ⚠️ SECURITY: использует innerHTML. Контент должен приходить ТОЛЬКО из
+ * доверенного content.json. Никогда не передавать пользовательский ввод
+ * без санитизации. В будущем — рассмотреть createElement + textContent.
  */
 export function renderScenes(content, SCENES) {
   const container = document.getElementById('scenes-container');

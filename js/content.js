@@ -46,23 +46,35 @@ export function validateContent(content, SCENES) {
     const sceneConfig = SCENES[i];
     const sceneData = content.scenes[i];
 
-    if (!sceneConfig.isIntro) {
-      if (typeof sceneData.image !== 'string') throw new Error(`Сцена ${sceneConfig.id}: отсутствует или не строка image`);
-      if (typeof sceneData.title !== 'string') throw new Error(`Сцена ${sceneConfig.id}: отсутствует или не строка title`);
+    // Guard: sceneData может быть null в невалидном JSON.
+    // Без этого TypeError случится ДО Array.isArray и остановит весь lifecycle.
+    if (!sceneData || typeof sceneData !== 'object' || Array.isArray(sceneData)) {
+      throw new Error(`Сцена ${sceneConfig.id}: данные отсутствуют или не являются объектом`);
+    }
+
+    // image и title обязательны для всех сцен включая интро —
+    // render.js читает их напрямую для обеих веток (isIntro и обычных).
+    if (typeof sceneData.image !== 'string' || sceneData.image.trim() === '') {
+      throw new Error(`Сцена ${sceneConfig.id}: image отсутствует или пустой`);
+    }
+    if (typeof sceneData.title !== 'string' || sceneData.title.trim() === '') {
+      throw new Error(`Сцена ${sceneConfig.id}: title отсутствует или пустой`);
     }
 
     if (!Array.isArray(sceneData.textBlocks)) {
       throw new Error(`Сцена ${sceneConfig.id}: textBlocks должен быть массивом`);
     }
-    
-    const expectedTextBlocks = sceneConfig.isIntro ? 1 : sceneConfig.textBlocks;
+
+    // Источник истины — config.js (SCENES[i].textBlocks), не хардкод
+    const expectedTextBlocks = sceneConfig.textBlocks;
     if (sceneData.textBlocks.length !== expectedTextBlocks) {
       throw new Error(`Сцена ${sceneConfig.id}: ожидали ${expectedTextBlocks} textBlocks, получили ${sceneData.textBlocks.length}`);
     }
 
     sceneData.textBlocks.forEach((block, idx) => {
-      if (typeof block !== 'string') {
-        throw new Error(`Сцена ${sceneConfig.id}, текстовый блок ${idx}: должен быть строкой`);
+      // Проверяем и тип и пустую строку — пустой блок сломает рендер
+      if (typeof block !== 'string' || block.trim() === '') {
+        throw new Error(`Сцена ${sceneConfig.id}, блок ${idx}: textBlock пустой или не строка`);
       }
       
       const lineCount = (block.match(/\n/g) || []).length + 1;

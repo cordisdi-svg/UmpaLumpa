@@ -1,6 +1,6 @@
 /* ─── scene.css — стили сцен ─────────────────────────────────────────────────
    Фаза 0: layout-критичные правила (sticky-механика).
-   Фаза 2: дополняется типографикой, текстовыми блоками, интро-сценой.
+   Фаза 2: типографика текстовых блоков, интро-сцена, debug-режим.
 
    ⚠️ КРИТИЧЕСКИЕ ЗАПРЕТЫ на .scene, body, html:
       transform | filter | overflow: hidden | clip-path | contain: layout style
@@ -35,6 +35,31 @@
   overflow: hidden;
   clip-path: inset(100% 0 0 0); /* начальное состояние — маска закрыта */
   z-index: 0;
+}
+
+/* ─── Debug-режим ────────────────────────────────────────────────────────────
+   ТЕСТ: добавить class="debug" на <body> → маски сцен 2-6 открываются.
+   ОБЯЗАТЕЛЬНО убрать перед деплоем / Фазой 3.
+   Вместо ручного комментирования clip-path — нет риска забытого коммита. */
+body.debug .scene__mask {
+  clip-path: inset(0% 0 0 0);
+}
+
+/* Красный баннер — визуальная защита от забытого debug в релизе */
+body.debug::before {
+  content: '⚠ DEBUG MODE — убрать class="debug" с <body> перед деплоем';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483647; /* max possible — поверх всего без конфликтов с будущими слоями */
+  background: #c0392b;
+  color: #fff;
+  text-align: center;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 6px 12px;
+  pointer-events: none;
 }
 
 /* ─── Картинка ───────────────────────────────────────────────────────────── */
@@ -84,21 +109,46 @@
 }
 
 /* ─── Текстовый блок (плашка) ────────────────────────────────────────────── */
+/* Fallback: тёмный фон без блюра — текст читается на всех браузерах */
 .scene__text-block {
-  background: var(--color-text-block-bg);
+  background: rgba(0, 0, 0, 0.70);
   border: 1px solid var(--color-text-block-border);
   border-radius: var(--radius-md);
   padding: var(--space-6);
-  margin: 0 var(--space-6) var(--space-6);
+  margin: 0 auto var(--space-6);
+  max-width: 600px;
 
   font-family: var(--font-body);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-body-on-dark);
 
-  /* Начальная позиция для GSAP — смещён вниз */
+  /* Начальная позиция для GSAP — смещён вниз на один экран */
   transform: translateY(100vh);
   /* ⚠️ opacity НЕ используется для анимации через scrub — мигает */
+
+  /* Перф-буст перед GSAP: GPU-слой уже выделен до начала анимации */
+  will-change: transform;
+}
+
+/* Progressive Enhancement: блюр поверх тёмного фона
+   Работает как два слоя: fallback (rgba 0.70) + блюр поверх (rgba 0.80 из токенов).
+   ⚠️ Safari perf: iPhone ≤12 + активный GSAP → возможна просадка FPS до 30-40.
+      Первый кандидат на оптимизацию в Фазе 8 (Lighthouse Mobile audit). */
+@supports (backdrop-filter: blur(8px)) {
+  .scene__text-block {
+    background: var(--color-text-block-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* На мобильных горизонтальные отступы от краёв экрана */
+@media (max-width: 640px) {
+  .scene__text-block {
+    margin-left: var(--space-4);
+    margin-right: var(--space-4);
+  }
 }
 
 /* ─── Интро-сцена (Сцена 1) ──────────────────────────────────────────────── */
@@ -116,6 +166,20 @@
   position: absolute;
   inset: 0;
   z-index: 0;
+  /* position: absolute создаёт positioning context — ::after привязан к нему */
+}
+
+/* Градиент поверх картинки — readable contrast для белого текста */
+.scene__intro-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.40) 0%,
+    rgba(0, 0, 0, 0.10) 40%,
+    rgba(0, 0, 0, 0.65) 100%
+  );
 }
 
 .scene__intro-image img {
@@ -131,6 +195,13 @@
   padding: var(--space-8) var(--space-6) 0;
 }
 
+/* Заголовок интро — крупнее стандартного .scene__title */
+.scene__intro-title .scene__title {
+  font-size: var(--text-3xl);
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 .scene__intro-text {
   position: absolute;
   bottom: 0;
@@ -138,9 +209,26 @@
   right: 0;
   z-index: 1;
   padding: var(--space-6);
+  display: flex;
+  justify-content: center;
 }
 
 /* Текстовый блок в интро — без GSAP-смещения */
 .scene--intro .scene__text-block {
   transform: none;
+  will-change: auto; /* интро статично, GSAP не трогает — GPU-слой не нужен */
+  margin-bottom: var(--space-10);
+  max-width: 600px;
+  width: 100%;
+}
+
+/* ─── TEMP: только для теста Фазы 2 ─────────────────────────────────────────
+   TODO: ФАЗА 3 — ОБЯЗАТЕЛЬНО УДАЛИТЬ до initScenes().
+   Причина: JS устанавливает scene.style.height в пикселях (шаг 9 lifecycle).
+   CSS min-height перебивает JS при коротком тексте → прогресс ScrollTrigger
+   рассчитывается неверно → анимации сдвигаются.
+   300vh (вместо 250vh): запас для Сцены 5 (текст + карусель).
+   ─────────────────────────────────────────────────────────────────────────── */
+.scene:not(.scene--intro) {
+  min-height: 300vh;
 }
