@@ -688,6 +688,7 @@ const SCENES = [
 | `transform / filter` на `.scene` | Создаёт stacking context, ломает `sticky` |
 | `clip-path` на `.scene` (не на `.scene__mask`) | Ломает `sticky` на iOS Safari |
 | `.scene__image-layer` как отдельный слой | Лишняя вложенность — img прямо в `.scene__mask` |
+| `start: "top top"` для clip-path триггера | Создаёт гарантированный зазор: sticky предыдущей сцены заканчивается в той же точке где начинается шторка новой — виден белый фон |
 | `duration` в px в timeline | Разрушает нормализованную модель |
 | `scrub: true` или `scrub: 1` | Перескакивает фазы / слишком долгая инерция |
 | `passive: true` на `touchmove` карусели | Блокирует `preventDefault` |
@@ -710,14 +711,17 @@ const SCENES = [
 
 ## Инварианты (должны выполняться всегда)
 
-- ✔ Один animation timeline + один will-change ScrollTrigger на сцену
+- ✔ Clip timeline: start "top bottom" → end "top top" — шторка за один экран скролла
+- ✔ Text timeline: start "top top" → end "bottom bottom" — текст за BASE_VH + textHeight
+- ✔ Will-change ScrollTrigger: start "top 120%" → end "bottom -20%"
+- ✔ TEXT_START нормализован к дистанции text trigger (BASE_VH + textHeight), не к sceneHeight
+- ✔ SPLIT_END — удалён из config: clip trigger всегда 0%→100% в своём прогрессе
 - ✔ `.scene ~ .scene` имеет `margin-top: -100dvh` — физическое перекрытие сцен
 - ✔ `.scene__mask` имеет `position: sticky; top: 0` — залипание картинки на viewport
 - ✔ `overflow: hidden` на `.scene__mask` — img не вылезает за пределы sticky-контейнера
 - ✔ `object-fit: cover` на `.scene__mask img` — пропорции без растяжки при любом соотношении сторон
 - ✔ img живёт прямо в `.scene__mask` — отдельный `.scene__image-layer` отсутствует
-- ✔ Timeline нормализован через `SPLIT_END`, `TEXT_START`, `blockRatio` из `config.js` (без магических чисел)
-- ✔ Overlap split↔text через `overlapRatio = SPLIT_END - TEXT_START`
+- ✔ Timeline нормализован через `TEXT_START`, `blockRatio` из `config.js` (без магических чисел)
 - ✔ Триггер nth текстблока: старт когда верхний край (n-1)-го блока уходит за top: 0
 - ✔ "Буфер чтения" в конце каждой сцены — ожидаемое поведение, не баг
 - ✔ Все анимации обратимы (scroll вверх = точная инверсия)

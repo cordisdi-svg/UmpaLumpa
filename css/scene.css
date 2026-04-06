@@ -10,6 +10,7 @@
 /* ─── Контейнер сцены ────────────────────────────────────────────────────── */
 .scene {
   position: relative;
+  isolation: isolate;  /* создаёт stacking context для z-index без position */
   /* height выставляется явно через JS после recalcSceneHeights() */
   /* НЕТ: transform, filter, overflow, clip-path, contain */
   z-index: calc(var(--scene-index, 1) * 100);
@@ -123,8 +124,7 @@ body.debug::before {
   line-height: var(--leading-relaxed);
   color: var(--color-body-on-dark);
 
-  /* Начальная позиция для GSAP — смещён вниз на один экран */
-  transform: translateY(100vh);
+  /* transform убран — начальная позиция выставляется через gsap.set в engine.js */
   /* ⚠️ opacity НЕ используется для анимации через scrub — мигает */
 
   /* Перф-буст перед GSAP: GPU-слой уже выделен до начала анимации */
@@ -220,15 +220,4 @@ body.debug::before {
   margin-bottom: var(--space-10);
   max-width: 600px;
   width: 100%;
-}
-
-/* ─── TEMP: только для теста Фазы 2 ─────────────────────────────────────────
-   TODO: ФАЗА 3 — ОБЯЗАТЕЛЬНО УДАЛИТЬ до initScenes().
-   Причина: JS устанавливает scene.style.height в пикселях (шаг 9 lifecycle).
-   CSS min-height перебивает JS при коротком тексте → прогресс ScrollTrigger
-   рассчитывается неверно → анимации сдвигаются.
-   300vh (вместо 250vh): запас для Сцены 5 (текст + карусель).
-   ─────────────────────────────────────────────────────────────────────────── */
-.scene:not(.scene--intro) {
-  min-height: 300vh;
 }

@@ -24,23 +24,44 @@ import { SCENES, CRITICAL_FONT } from './config.js';
 import { fetchContent, validateContent } from './content.js';
 import { renderScenes, renderFaq, buildSceneElementsMap } from './render.js';
 import { initImageLoading } from './images.js';
+import { recalcSceneHeights, initScenes, initStaticScenes, initResizeHandler } from './engine.js';
 
 async function main() {
   console.log('[main] Scene Engine v4.3 — Фаза 0/1');
-  
+
   // 1-2. Контент
   const content = await fetchContent();
   validateContent(content, SCENES);
-  
+
   // 3-5. Рендер DOM и кэш
   renderScenes(content, SCENES);
   renderFaq(content.faq);
   const sceneElements = buildSceneElementsMap();
-  
+  window._sceneElements = sceneElements; // ← добавить эту строку
+
   // 6. Ленивая загрузка
   initImageLoading();
 
-  console.log('[main] Фаза 1: контент загружен и отрендерен');
+  // 7. Загрузка шрифтов
+  await document.fonts.load(`1em ${CRITICAL_FONT}`).catch(() => {
+    console.warn('[main] Шрифт не загрузился, продолжаем fallback-рендеринг');
+  });
+
+  // 8 & 9. Пересчёт высот
+  recalcSceneHeights(SCENES, sceneElements);
+
+  // 10 & 11. GSAP или Static View
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    initStaticScenes(SCENES, sceneElements);
+  } else {
+    initScenes(SCENES, sceneElements);
+    initResizeHandler(SCENES, sceneElements);
+  }
+
+  // (Временно) 15. refresh (полностью реализуется в Фазе 6)
+  ScrollTrigger.refresh(true);
+
+  console.log('[main] Фаза 3: Движок GSAP + ScrollTrigger запущен');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
